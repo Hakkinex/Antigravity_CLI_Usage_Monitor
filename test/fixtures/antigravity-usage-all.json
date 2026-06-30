@@ -1,0 +1,52 @@
+{
+  "accounts": [
+    {
+      "email": "account1@example.com",
+      "models": [
+        { "name": "Gemini 3 Pro (High)", "remainingPercent": 100, "resetInText": "4h 25m", "weeklyRemainingPercent": 92, "weeklyResetInText": "3d 4h" },
+        { "name": "Gemini 3 Pro (Low)", "remainingPercent": 100, "resetInText": "4h 25m", "weeklyRemainingPercent": 88, "weeklyResetInText": "3d 4h" },
+        { "name": "Gemini 3 Flash", "remainingPercent": 100, "resetInText": "4h 22m", "weeklyRemainingPercent": 100, "weeklyResetInText": "3d 4h" },
+        { "name": "Claude Sonnet 4.5", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 76, "weeklyResetInText": "2d 20h" },
+        { "name": "Claude Sonnet 4.5 (Thinking)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 68, "weeklyResetInText": "2d 20h" },
+        { "name": "Claude Opus 4.5 (Thinking)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 41, "weeklyResetInText": "2d 20h" },
+        { "name": "GPT-OSS 120B (Medium)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" }
+      ]
+    },
+    {
+      "email": "account2@example.com",
+      "models": [
+        { "name": "Gemini 3 Pro (High)", "remainingPercent": 82, "resetInText": "4h 25m", "weeklyRemainingPercent": 38, "weeklyResetInText": "3d 4h" },
+        { "name": "Gemini 3 Pro (Low)", "remainingPercent": 64, "resetInText": "4h 25m", "weeklyRemainingPercent": 22, "weeklyResetInText": "3d 4h" },
+        { "name": "Gemini 3 Flash", "remainingPercent": 40, "resetInText": "4h 22m", "weeklyRemainingPercent": 71, "weeklyResetInText": "3d 4h" },
+        { "name": "Claude Sonnet 4.5", "remainingPercent": 28, "resetInText": "4h 18m", "weeklyRemainingPercent": 14, "weeklyResetInText": "2d 20h" },
+        { "name": "Claude Sonnet 4.5 (Thinking)", "remainingPercent": 11, "resetInText": "4h 18m", "weeklyRemainingPercent": 6, "weeklyResetInText": "2d 20h" },
+        { "name": "Claude Opus 4.5 (Thinking)", "remainingPercent": 0, "resetInText": "4h 18m", "weeklyRemainingPercent": 0, "weeklyResetInText": "2d 20h" },
+        { "name": "GPT-OSS 120B (Medium)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" }
+      ]
+    },
+    {
+      "email": "account3@example.com",
+      "models": [
+        { "name": "Gemini 3 Pro (High)", "remainingPercent": 100, "resetInText": "4h 25m", "weeklyRemainingPercent": 100, "weeklyResetInText": "3d 4h" },
+        { "name": "Gemini 3 Pro (Low)", "remainingPercent": 100, "resetInText": "4h 25m", "weeklyRemainingPercent": 100, "weeklyResetInText": "3d 4h" },
+        { "name": "Gemini 3 Flash", "remainingPercent": 100, "resetInText": "4h 22m", "weeklyRemainingPercent": 100, "weeklyResetInText": "3d 4h" },
+        { "name": "Claude Sonnet 4.5", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" },
+        { "name": "Claude Sonnet 4.5 (Thinking)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" },
+        { "name": "Claude Opus 4.5 (Thinking)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" },
+        { "name": "GPT-OSS 120B (Medium)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" }
+      ]
+    },
+    {
+      "email": "account4@example.com",
+      "models": [
+        { "name": "Gemini 3 Pro (High)", "remainingPercent": 100, "resetInText": "4h 25m", "weeklyRemainingPercent": 100, "weeklyResetInText": "3d 4h" },
+        { "name": "Gemini 3 Pro (Low)", "remainingPercent": 100, "resetInText": "4h 25m", "weeklyRemainingPercent": 100, "weeklyResetInText": "3d 4h" },
+        { "name": "Gemini 3 Flash", "remainingPercent": 100, "resetInText": "4h 22m", "weeklyRemainingPercent": 100, "weeklyResetInText": "3d 4h" },
+        { "name": "Claude Sonnet 4.5", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" },
+        { "name": "Claude Sonnet 4.5 (Thinking)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" },
+        { "name": "Claude Opus 4.5 (Thinking)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" },
+        { "name": "GPT-OSS 120B (Medium)", "remainingPercent": 100, "resetInText": "4h 18m", "weeklyRemainingPercent": 100, "weeklyResetInText": "2d 20h" }
+      ]
+    }
+  ]
+}

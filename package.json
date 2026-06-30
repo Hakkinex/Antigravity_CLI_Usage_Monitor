@@ -1,0 +1,33 @@
+{
+  "name": "agy-monitor",
+  "version": "0.1.0",
+  "description": "Read-only terminal dashboard for monitoring Antigravity CLI quota across multiple accounts.",
+  "type": "module",
+  "bin": {
+    "agy-monitor": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts watch --mock",
+    "start": "node dist/index.js watch",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "antigravity",
+    "cli",
+    "quota",
+    "monitor",
+    "dashboard"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
