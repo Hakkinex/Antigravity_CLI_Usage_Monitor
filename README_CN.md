@@ -145,6 +145,8 @@ antigravity-usage --all --json --method google
 
 `--refresh` 只會在使用者要求啟動強制刷新，或手動刷新時傳入。
 
+週 quota 需要 `antigravity-usage --json` 輸出 `weeklyRemainingPercentage`、`weeklyResetTime` 或 `weeklyTimeUntilResetMs` 等欄位。乾淨的 upstream 修改方向請看 [docs/antigravity-usage-weekly-json.md](docs/antigravity-usage-weekly-json.md)。
+
 ## 設定
 
 設定檔位置：

@@ -145,6 +145,8 @@ antigravity-usage --all --json --method google
 
 `--refresh` is passed only on startup when requested, or during manual refresh.
 
+Weekly quota requires `antigravity-usage --json` to expose weekly fields such as `weeklyRemainingPercentage`, `weeklyResetTime`, or `weeklyTimeUntilResetMs`. See [docs/antigravity-usage-weekly-json.md](docs/antigravity-usage-weekly-json.md) for the clean upstream patch plan.
+
 ## Config
 
 Config file locations:

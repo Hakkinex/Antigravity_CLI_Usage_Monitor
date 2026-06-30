@@ -44,6 +44,8 @@ describe('parseAntigravityUsageJson', () => {
                 isExhausted: false,
                 resetTime: '2026-06-30T15:54:56Z',
                 timeUntilResetMs: 42038909,
+                weeklyRemainingPercentage: 0.721,
+                weeklyTimeUntilResetMs: 259200000,
                 isAutocompleteOnly: false
               }
             ]
@@ -66,5 +68,8 @@ describe('parseAntigravityUsageJson', () => {
     expect(snapshot.accounts[0]?.models[1]?.remainingPercent).toBe(26);
     expect(snapshot.accounts[0]?.models[1]?.status).toBe('low');
     expect(snapshot.accounts[0]?.models[1]?.resetInText).toBe('11h 40m');
+    expect(snapshot.accounts[0]?.models[1]?.weeklyRemainingPercent).toBe(72);
+    expect(snapshot.accounts[0]?.models[1]?.weeklyResetInText).toBe('72h 0m');
+    expect(snapshot.accounts[0]?.models[1]?.weeklyStatus).toBe('medium');
   });
 });

@@ -95,7 +95,9 @@ function normalizeModel(raw, index, config) {
     const weeklyRecord = firstRecord(record, ['weekly', 'week', 'weeklyQuota', 'weeklyUsage', 'weekUsage']);
     const weeklyRemainingPercent = firstNumber(record, [
         'weeklyRemainingPercent',
+        'weeklyRemainingPercentage',
         'weekRemainingPercent',
+        'weekRemainingPercentage',
         'weeklyRemaining',
         'weekRemaining',
         'weekly_percentage',
@@ -104,6 +106,7 @@ function normalizeModel(raw, index, config) {
         (weeklyRecord
             ? firstNumber(weeklyRecord, [
                 'remainingPercent',
+                'remainingPercentage',
                 'remaining',
                 'percent',
                 'percentage',
@@ -115,10 +118,14 @@ function normalizeModel(raw, index, config) {
         (weeklyRecord
             ? firstString(weeklyRecord, ['resetInText', 'resetsIn', 'resetIn', 'reset', 'resets_in'])
             : undefined) ??
+        formatResetFromMilliseconds(firstRawNumber(record, ['weeklyTimeUntilResetMs', 'weekTimeUntilResetMs', 'weeklyResetInMs']) ??
+            (weeklyRecord ? firstRawNumber(weeklyRecord, ['timeUntilResetMs', 'resetInMs']) : null)) ??
         formatResetFromSeconds(firstRawNumber(record, ['weeklyResetInSeconds', 'weekResetInSeconds', 'weeklyResetSeconds']) ??
             (weeklyRecord
                 ? firstRawNumber(weeklyRecord, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset'])
-                : null));
+                : null)) ??
+        formatResetFromTimestamp(firstString(record, ['weeklyResetTime', 'weeklyResetAt', 'weekResetTime', 'weekResetAt']) ??
+            (weeklyRecord ? firstString(weeklyRecord, ['resetAt', 'resetTime', 'reset_at']) : undefined));
     const weeklyResetAt = firstString(record, ['weeklyResetAt', 'weekResetAt', 'weeklyResetTime']) ??
         (weeklyRecord ? firstString(weeklyRecord, ['resetAt', 'resetTime', 'reset_at']) : undefined);
     const group = getModelGroup(name);
@@ -197,6 +204,15 @@ function formatResetFromMilliseconds(milliseconds) {
     if (milliseconds === null)
         return null;
     return formatResetFromSeconds(Math.floor(milliseconds / 1000));
+}
+function formatResetFromTimestamp(timestamp) {
+    if (!timestamp)
+        return null;
+    const resetMs = new Date(timestamp).getTime();
+    if (!Number.isFinite(resetMs))
+        return null;
+    const diffSeconds = Math.floor((resetMs - Date.now()) / 1000);
+    return diffSeconds > 0 ? formatResetFromSeconds(diffSeconds) : null;
 }
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
