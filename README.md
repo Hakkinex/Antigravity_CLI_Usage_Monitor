@@ -129,6 +129,24 @@ agy-monitor watch --mock
 | `npm test` | Run Vitest tests. |
 | `npm run typecheck` | Run TypeScript without emitting files. |
 
+### Debug Dump
+
+To inspect the raw `antigravity-usage` response used by the monitor:
+
+```bash
+agy-monitor debug-dump --method google --refresh
+```
+
+This writes local debug files to `.agy-monitor-debug/`:
+
+- `antigravity-usage-stdout-*.json`
+- `antigravity-usage-stderr-*.log`
+- `analysis-*.json`
+
+The analysis file scans stdout JSON and debug stderr blocks for candidate quota paths such as `weekly`, `week`, `quota`, `reset`, `remaining`, `period`, and `window`.
+
+Do not commit `.agy-monitor-debug/`; it can contain account emails or raw quota data.
+
 ## Data Source
 
 The default wrapper command is:

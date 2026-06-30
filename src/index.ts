@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { runWatch } from './commands/watch.js';
+import { runDebugDump } from './commands/debugDump.js';
 
 const [, , command, ...args] = process.argv;
 
@@ -10,6 +11,8 @@ if (!command || command === 'help' || command === '--help' || command === '-h') 
 
 if (command === 'watch') {
   runWatch(args);
+} else if (command === 'debug-dump') {
+  await runDebugDump(args);
 } else {
   console.error(`Unknown command: ${command}`);
   printHelp();
@@ -21,6 +24,7 @@ function printHelp(): void {
 
 Usage:
   agy-monitor watch [options]
+  agy-monitor debug-dump [options]
 
 Options:
   --interval <sec>   Refresh interval, default 60
@@ -31,6 +35,14 @@ Options:
   --refresh          Force refresh on startup and manual refresh
   --debug            Show wrapper command details
   --mock             Use bundled fixture instead of antigravity-usage
+
+Debug dump options:
+  --method <name>    antigravity-usage method, default google
+  --account <email>  Dump one account instead of all accounts
+  --no-all           Do not pass --all
+  --refresh          Force refresh
+  --all-models       Include autocomplete models
+  --output <dir>     Output directory, default .agy-monitor-debug
 
 Keyboard:
   r                  Refresh now

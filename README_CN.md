@@ -129,6 +129,24 @@ agy-monitor watch --mock
 | `npm test` | 執行 Vitest 測試。 |
 | `npm run typecheck` | 執行 TypeScript 檢查但不輸出檔案。 |
 
+### Debug Dump
+
+若要檢查 monitor 實際取得的 `antigravity-usage` 原始 response：
+
+```bash
+agy-monitor debug-dump --method google --refresh
+```
+
+這會把 debug 檔案寫到 `.agy-monitor-debug/`：
+
+- `antigravity-usage-stdout-*.json`
+- `antigravity-usage-stderr-*.log`
+- `analysis-*.json`
+
+`analysis` 檔會掃描 stdout JSON 與 debug stderr 區塊，列出可能與 quota 有關的路徑，例如 `weekly`、`week`、`quota`、`reset`、`remaining`、`period`、`window`。
+
+請勿提交 `.agy-monitor-debug/`，裡面可能包含帳號 email 或原始 quota 資料。
+
 ## 資料來源
 
 預設 wrapper 指令：

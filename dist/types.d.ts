@@ -62,6 +62,14 @@ export type WatchOptions = {
     debug: boolean;
     mock: boolean;
 };
+export type DebugDumpOptions = {
+    method: MonitorMethod;
+    all: boolean;
+    account?: string;
+    refresh: boolean;
+    allModels: boolean;
+    outputDir: string;
+};
 export type ProviderResult = {
     ok: true;
     raw: unknown;
