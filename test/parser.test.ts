@@ -16,4 +16,55 @@ describe('parseAntigravityUsageJson', () => {
     expect(snapshot.accounts[1]?.models[4]?.weeklyStatus).toBe('critical');
     expect(snapshot.accounts[1]?.models[5]?.status).toBe('exhausted');
   });
+
+  it('normalizes current antigravity-usage snapshot schema', () => {
+    const snapshot = parseAntigravityUsageJson(
+      [
+        {
+          email: 'user@example.com',
+          status: 'success',
+          snapshot: {
+            timestamp: '2026-06-30T04:14:17.108Z',
+            method: 'google',
+            email: 'user@example.com',
+            models: [
+              {
+                label: 'Gemini 3 Flash',
+                modelId: 'gemini-3-flash',
+                remainingPercentage: 0.9984601,
+                isExhausted: false,
+                resetTime: '2026-06-30T05:45:11Z',
+                timeUntilResetMs: 5453909,
+                isAutocompleteOnly: false
+              },
+              {
+                label: 'Claude Opus 4.6 (Thinking)',
+                modelId: 'claude-opus-4-6-thinking',
+                remainingPercentage: 0.2598664,
+                isExhausted: false,
+                resetTime: '2026-06-30T15:54:56Z',
+                timeUntilResetMs: 42038909,
+                isAutocompleteOnly: false
+              }
+            ]
+          }
+        }
+      ],
+      defaultConfig,
+      'google'
+    );
+
+    expect(snapshot.accounts).toHaveLength(1);
+    expect(snapshot.accounts[0]?.displayName).toBe('user@example.com');
+    expect(snapshot.accounts[0]?.status).toBe('ok');
+    expect(snapshot.accounts[0]?.models).toHaveLength(2);
+    expect(snapshot.accounts[0]?.models[0]?.name).toBe('Gemini 3 Flash');
+    expect(snapshot.accounts[0]?.models[0]?.remainingPercent).toBe(100);
+    expect(snapshot.accounts[0]?.models[0]?.resetInText).toBe('1h 30m');
+    expect(snapshot.accounts[0]?.models[0]?.weeklyRemainingPercent).toBeNull();
+    expect(snapshot.accounts[0]?.models[1]?.name).toBe('Claude Opus 4.6 (Thinking)');
+    expect(snapshot.accounts[0]?.models[1]?.remainingPercent).toBe(26);
+    expect(snapshot.accounts[0]?.models[1]?.status).toBe('low');
+    expect(snapshot.accounts[0]?.models[1]?.resetInText).toBe('11h 40m');
+  });
 });

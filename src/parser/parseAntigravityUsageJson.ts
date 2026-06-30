@@ -44,14 +44,19 @@ function extractAccounts(raw: unknown): unknown[] {
 
 function normalizeAccount(raw: unknown, index: number, config: MonitorConfig): AccountQuota {
   const record = isRecord(raw) ? raw : {};
-  const email = firstString(record, ['email', 'account', 'accountEmail', 'user', 'userEmail']);
+  const snapshotRecord = firstRecord(record, ['snapshot']);
+  const email =
+    firstString(record, ['email', 'account', 'accountEmail', 'user', 'userEmail']) ??
+    (snapshotRecord ? firstString(snapshotRecord, ['email', 'account', 'accountEmail', 'user', 'userEmail']) : undefined);
   const alias = email ? config.accountAliases[email] : undefined;
   const displayName =
     alias ??
     (config.maskEmail && email ? maskEmail(email) : undefined) ??
     email ??
     `Account ${index + 1}`;
-  const errorMessage = firstString(record, ['error', 'errorMessage', 'message']);
+  const errorMessage =
+    firstString(record, ['error', 'errorMessage', 'message']) ??
+    (record.status === 'error' ? firstString(snapshotRecord ?? {}, ['error', 'errorMessage', 'message']) : undefined);
   const models = extractModels(record).map((modelRaw, modelIndex) =>
     normalizeModel(modelRaw, modelIndex, config)
   );
@@ -67,7 +72,19 @@ function normalizeAccount(raw: unknown, index: number, config: MonitorConfig): A
 }
 
 function extractModels(record: AnyRecord): unknown[] {
-  const candidates = [record.models, record.quotas, record.quota, record.limits, record.usage];
+  const snapshot = firstRecord(record, ['snapshot']);
+  const candidates = [
+    record.models,
+    snapshot?.models,
+    record.quotas,
+    record.quota,
+    snapshot?.quotas,
+    snapshot?.quota,
+    record.limits,
+    snapshot?.limits,
+    record.usage,
+    snapshot?.usage
+  ];
   for (const candidate of candidates) {
     if (Array.isArray(candidate)) return candidate;
     if (isRecord(candidate)) {
@@ -82,9 +99,10 @@ function extractModels(record: AnyRecord): unknown[] {
 
 function normalizeModel(raw: unknown, index: number, config: MonitorConfig): ModelQuota {
   const record = isRecord(raw) ? raw : {};
-  const name = firstString(record, ['name', 'model', 'modelName', 'displayName']) ?? `Model ${index + 1}`;
+  const name = firstString(record, ['name', 'model', 'modelName', 'displayName', 'label', 'modelId']) ?? `Model ${index + 1}`;
   const remainingPercent = firstNumber(record, [
     'remainingPercent',
+    'remainingPercentage',
     'remaining',
     'percent',
     'percentage',
@@ -93,6 +111,7 @@ function normalizeModel(raw: unknown, index: number, config: MonitorConfig): Mod
   ]);
   const resetInText =
     firstString(record, ['resetInText', 'resetsIn', 'resetIn', 'reset', 'resets_in']) ??
+    formatResetFromMilliseconds(firstRawNumber(record, ['timeUntilResetMs'])) ??
     formatResetFromSeconds(firstRawNumber(record, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset']));
   const resetAt = firstString(record, ['resetAt', 'resetTime', 'reset_at']);
   const weeklyRecord = firstRecord(record, ['weekly', 'week', 'weeklyQuota', 'weeklyUsage', 'weekUsage']);
@@ -147,7 +166,7 @@ function normalizeModel(raw: unknown, index: number, config: MonitorConfig): Mod
 }
 
 function looksLikeAccount(raw: AnyRecord): boolean {
-  return Boolean(raw.email || raw.models || raw.quotas || raw.quota);
+  return Boolean(raw.email || raw.models || raw.quotas || raw.quota || (isRecord(raw.snapshot) && (raw.snapshot.email || raw.snapshot.models || raw.snapshot.quotas || raw.snapshot.quota)));
 }
 
 function firstString(record: AnyRecord, keys: string[]): string | undefined {
@@ -200,6 +219,11 @@ function formatResetFromSeconds(seconds: number | null): string | null {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+function formatResetFromMilliseconds(milliseconds: number | null): string | null {
+  if (milliseconds === null) return null;
+  return formatResetFromSeconds(Math.floor(milliseconds / 1000));
 }
 
 function isRecord(value: unknown): value is AnyRecord {
