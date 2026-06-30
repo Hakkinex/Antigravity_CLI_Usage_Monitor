@@ -38,7 +38,7 @@ Debug dump options:
   --method <name>    antigravity-usage method, default google
   --account <email>  Dump one account instead of all accounts
   --no-all           Do not pass --all
-  --refresh          Force refresh
+  --use-cache        Allow cached quota data; default forces refresh
   --all-models       Include autocomplete models
   --output <dir>     Output directory, default .agy-monitor-debug
 

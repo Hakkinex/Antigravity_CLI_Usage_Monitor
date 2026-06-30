@@ -134,7 +134,7 @@ agy-monitor watch --mock
 To inspect the raw `antigravity-usage` response used by the monitor:
 
 ```bash
-agy-monitor debug-dump --method google --refresh
+agy-monitor debug-dump --method google
 ```
 
 This writes local debug files to `.agy-monitor-debug/`:
@@ -144,6 +144,8 @@ This writes local debug files to `.agy-monitor-debug/`:
 - `analysis-*.json`
 
 The analysis file scans stdout JSON and debug stderr blocks for candidate quota paths such as `weekly`, `week`, `quota`, `reset`, `remaining`, `period`, and `window`.
+
+Debug dump forces a fresh upstream request by default. Use `--use-cache` only when you intentionally want to inspect cached snapshots.
 
 Do not commit `.agy-monitor-debug/`; it can contain account emails or raw quota data.
 

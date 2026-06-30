@@ -109,4 +109,12 @@ Run `antigravity-usage` in debug mode and inspect the raw `Models response recei
 antigravity-usage quota --json --method google --debug
 ```
 
+When debugging through `agy-monitor`, use:
+
+```bash
+agy-monitor debug-dump --method google
+```
+
+`debug-dump` forces refresh by default so the result is not limited to cached snapshots.
+
 If weekly fields are not present in `/v1internal:fetchAvailableModels`, inspect Antigravity's local Connect API response or the endpoint used by the native Antigravity CLI UI. Do not add guessed weekly fields until the raw response field names are known.

@@ -134,7 +134,7 @@ agy-monitor watch --mock
 若要檢查 monitor 實際取得的 `antigravity-usage` 原始 response：
 
 ```bash
-agy-monitor debug-dump --method google --refresh
+agy-monitor debug-dump --method google
 ```
 
 這會把 debug 檔案寫到 `.agy-monitor-debug/`：
@@ -144,6 +144,8 @@ agy-monitor debug-dump --method google --refresh
 - `analysis-*.json`
 
 `analysis` 檔會掃描 stdout JSON 與 debug stderr 區塊，列出可能與 quota 有關的路徑，例如 `weekly`、`week`、`quota`、`reset`、`remaining`、`period`、`window`。
+
+Debug dump 預設會強制發出 fresh upstream request。只有在你刻意想檢查 cached snapshot 時，才使用 `--use-cache`。
 
 請勿提交 `.agy-monitor-debug/`，裡面可能包含帳號 email 或原始 quota 資料。
 

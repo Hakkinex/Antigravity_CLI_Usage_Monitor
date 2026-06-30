@@ -39,7 +39,7 @@ function parseDebugDumpOptions(argv) {
         method: readValue('--method') ?? 'google',
         all: !has('--no-all'),
         account: readValue('--account'),
-        refresh: has('--refresh'),
+        refresh: !has('--use-cache'),
         allModels: has('--all-models'),
         outputDir: resolve(readValue('--output') ?? '.agy-monitor-debug')
     };
@@ -74,6 +74,7 @@ function runAntigravityUsageDebug(options) {
 function analyzeDebugOutput(result) {
     const stdoutParsed = parseJson(result.stdout);
     const stdoutJsonPaths = stdoutParsed.ok ? collectPaths(stdoutParsed.value) : [];
+    const usedCache = /Using cached data|Cache .* is valid/i.test(result.stderr) || hasCachedStatus(stdoutParsed);
     const stderrJsonBlocks = extractDebugJsonBlocks(result.stderr).map((block) => {
         const parsed = parseJson(block.json);
         return {
@@ -88,16 +89,32 @@ function analyzeDebugOutput(result) {
         generatedAt: new Date().toISOString(),
         command: result.command,
         exitCode: result.exitCode,
+        usedCache,
         stdoutJsonParseable: stdoutParsed.ok,
         stdoutJsonPaths,
         stderrJsonBlocks,
         candidatePaths: [...new Set(candidatePaths)].sort(),
         nextSteps: [
+            usedCache
+                ? 'This dump used cached quota data. Re-run debug-dump without --use-cache to force a fresh upstream request.'
+                : 'This dump appears to use fresh quota data rather than cached quota snapshots.',
             'Look for weekly, week, quota, limit, reset, remaining, rolling, period, or window fields in candidatePaths.',
             'If weekly quota is present in stderr raw API blocks but absent from stdout JSON, patch antigravity-usage parser/types.',
             'If weekly quota is absent from fetchAvailableModels, inspect Antigravity local Connect API or native CLI network calls.'
         ]
     };
+}
+function hasCachedStatus(parsed) {
+    if (!parsed.ok)
+        return false;
+    if (!Array.isArray(parsed.value))
+        return false;
+    return parsed.value.some((item) => {
+        if (typeof item !== 'object' || item === null)
+            return false;
+        const status = item.status;
+        return status === 'cached';
+    });
 }
 function parseJson(input) {
     try {
