@@ -184,8 +184,8 @@ Example:
   "maskEmail": false,
   "allModels": false,
   "accountAliases": {
-    "account1@gmail.com": "Main",
-    "account2@gmail.com": "Backup"
+    "account1@example.com": "Main",
+    "account2@example.com": "Backup"
   },
   "thresholds": {
     "green": 80,

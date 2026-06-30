@@ -1,6 +1,8 @@
 import { padRight, visibleLength } from '../utils/text.js';
 
 export function layoutCards(cards: string[][], preferredColumns: number, terminalWidth: number): string {
+  if (cards.length === 0) return '';
+
   const cardWidth = Math.max(...cards.flat().map(visibleLength));
   const gap = 4;
   const maxColumns = Math.max(1, Math.floor((terminalWidth + gap) / (cardWidth + gap)));

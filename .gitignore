@@ -3,3 +3,12 @@ node_modules/
 .agy-monitor-debug/
 log/
 *.log
+.env
+.env.*
+tokens.json
+credentials.json
+*.pem
+*.key
+*.tsbuildinfo
+.vscode/
+.idea/

@@ -13,6 +13,7 @@ export declare class PollingEngine {
     private tick;
     private scheduleNext;
     private refresh;
+    private handleRefreshFailure;
     private render;
     private renderRefreshLine;
 }

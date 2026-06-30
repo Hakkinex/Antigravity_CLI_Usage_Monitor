@@ -23,7 +23,7 @@ export class PollingEngine {
             process.stdout.write('\u001b[?1049h\u001b[?25l\u001b[H');
             this.tickTimer = setInterval(() => this.tick(), 1000);
         }
-        void this.refresh(this.options.refresh);
+        void this.refresh(this.options.refresh).catch((error) => this.handleRefreshFailure(error));
     }
     stop() {
         this.stopped = true;
@@ -39,7 +39,7 @@ export class PollingEngine {
         }
     }
     manualRefresh() {
-        void this.refresh(true);
+        void this.refresh(true).catch((error) => this.handleRefreshFailure(error));
     }
     tick() {
         if (this.stopped || this.state.isFetching || !this.state.snapshot)
@@ -53,7 +53,9 @@ export class PollingEngine {
         if (this.timer)
             clearTimeout(this.timer);
         this.state.nextRefreshInSec = this.options.interval;
-        this.timer = setTimeout(() => void this.refresh(false), this.options.interval * 1000);
+        this.timer = setTimeout(() => {
+            void this.refresh(false).catch((error) => this.handleRefreshFailure(error));
+        }, this.options.interval * 1000);
     }
     async refresh(forceRefresh) {
         if (this.state.isFetching)
@@ -76,13 +78,18 @@ export class PollingEngine {
             }
         }
         catch (error) {
-            this.state.lastError = error.message;
+            this.state.lastError = error instanceof Error ? error.message : String(error);
         }
         finally {
             this.state.isFetching = false;
             this.scheduleNext();
             this.render();
         }
+    }
+    handleRefreshFailure(error) {
+        this.state.lastError = error instanceof Error ? error.message : String(error);
+        this.state.isFetching = false;
+        this.render();
     }
     render() {
         process.stdout.write('\u001b[H\u001b[0J');

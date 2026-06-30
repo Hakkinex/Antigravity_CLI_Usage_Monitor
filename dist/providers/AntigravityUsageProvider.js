@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 const TIMEOUT_MS = 30_000;
+const ALLOWED_METHODS = new Set(['google', 'local', 'auto']);
 export async function fetchAntigravityUsage(options) {
     const attempts = buildAttempts(options);
     for (const args of attempts) {
@@ -20,7 +21,8 @@ export async function fetchAntigravityUsage(options) {
     };
 }
 function buildAttempts(options) {
-    const flags = ['--all', '--json', '--method', String(options.method)];
+    const method = normalizeMethod(String(options.method));
+    const flags = ['--all', '--json', '--method', method];
     if (options.allModels)
         flags.push('--all-models');
     if (options.refresh)
@@ -59,5 +61,11 @@ function runAntigravityUsage(args) {
 function isLikelySubcommandProblem(message) {
     const lower = message.toLowerCase();
     return lower.includes('unknown command') || lower.includes('invalid command') || lower.includes('unexpected argument');
+}
+function normalizeMethod(value) {
+    if (!ALLOWED_METHODS.has(value)) {
+        throw new Error(`Invalid method: ${value}. Expected one of google, local, auto.`);
+    }
+    return value;
 }
 //# sourceMappingURL=AntigravityUsageProvider.js.map

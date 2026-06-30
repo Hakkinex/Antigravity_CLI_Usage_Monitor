@@ -1,7 +1,9 @@
 import { execFile } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 const TIMEOUT_MS = 60_000;
+const ALLOWED_METHODS = new Set(['google', 'local', 'auto']);
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function runDebugDump(argv) {
     const options = parseDebugDumpOptions(argv);
     mkdirSync(options.outputDir, { recursive: true });
@@ -10,10 +12,10 @@ export async function runDebugDump(argv) {
     const stdoutPath = resolve(options.outputDir, `antigravity-usage-stdout-${timestamp}.json`);
     const stderrPath = resolve(options.outputDir, `antigravity-usage-stderr-${timestamp}.log`);
     const analysisPath = resolve(options.outputDir, `analysis-${timestamp}.json`);
-    writeFileSync(stdoutPath, result.stdout || '', 'utf8');
-    writeFileSync(stderrPath, result.stderr || result.errorMessage || '', 'utf8');
+    writeFileSync(stdoutPath, result.stdout || '', { encoding: 'utf8', mode: 0o600 });
+    writeFileSync(stderrPath, result.stderr || result.errorMessage || '', { encoding: 'utf8', mode: 0o600 });
     const analysis = analyzeDebugOutput(result);
-    writeFileSync(analysisPath, `${JSON.stringify(analysis, null, 2)}\n`, 'utf8');
+    writeFileSync(analysisPath, `${JSON.stringify(analysis, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
     console.log(`Command: ${result.command}`);
     console.log(`Exit code: ${result.exitCode ?? 'unknown'}`);
     console.log(`stdout: ${stdoutPath}`);
@@ -35,13 +37,15 @@ function parseDebugDumpOptions(argv) {
         return index >= 0 ? argv[index + 1] : undefined;
     };
     const has = (name) => argv.includes(name);
+    const method = normalizeMethod(readValue('--method') ?? 'google');
+    const account = normalizeAccount(readValue('--account'));
     return {
-        method: readValue('--method') ?? 'google',
+        method,
         all: !has('--no-all'),
-        account: readValue('--account'),
+        account,
         refresh: !has('--use-cache'),
         allModels: has('--all-models'),
-        outputDir: resolve(readValue('--output') ?? '.agy-monitor-debug')
+        outputDir: resolveOutputDir(readValue('--output') ?? '.agy-monitor-debug')
     };
 }
 function buildArgs(options) {
@@ -70,6 +74,29 @@ function runAntigravityUsageDebug(options) {
             });
         });
     });
+}
+function normalizeMethod(value) {
+    if (!ALLOWED_METHODS.has(value)) {
+        throw new Error(`Invalid method: ${value}. Expected one of google, local, auto.`);
+    }
+    return value;
+}
+function normalizeAccount(value) {
+    if (!value)
+        return undefined;
+    if (value.startsWith('-') || !EMAIL_PATTERN.test(value)) {
+        throw new Error(`Invalid account email: ${value}`);
+    }
+    return value;
+}
+function resolveOutputDir(value) {
+    const baseDir = process.cwd();
+    const resolved = resolve(baseDir, value);
+    const relativePath = relative(baseDir, resolved);
+    if (relativePath === '..' || relativePath.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)) {
+        throw new Error(`Output directory must stay inside the current project: ${value}`);
+    }
+    return resolved;
 }
 function analyzeDebugOutput(result) {
     const stdoutParsed = parseJson(result.stdout);
