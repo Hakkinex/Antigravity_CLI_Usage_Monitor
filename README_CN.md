@@ -63,6 +63,8 @@ Gemini 3 Pro (High)    ● 100% 4h25m   ● 92% 3d4h
 
 ## 安裝
 
+本專案使用 npm，請以 `package-lock.json` 作為標準 lockfile。
+
 先安裝資料來源工具：
 
 ```bash

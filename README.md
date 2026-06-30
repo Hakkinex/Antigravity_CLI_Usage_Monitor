@@ -63,6 +63,8 @@ Gemini 3 Pro (High)    ● 100% 4h25m   ● 92% 3d4h
 
 ## Install
 
+This project uses npm. `package-lock.json` is the canonical lockfile.
+
 Install the data provider first:
 
 ```bash
