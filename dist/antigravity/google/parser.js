@@ -92,7 +92,8 @@ export function parseGoogleModels(raw, ctx) {
         method: 'google',
         timestamp: now,
         models,
-        quotaResetTime: earliestIso ?? null
+        quotaResetTime: earliestIso ?? null,
+        raw
     };
 }
 function parsePromptCredits(response) {
@@ -116,7 +117,11 @@ export function parseQuotaSnapshot(codeAssistResponse, modelsResponse, email) {
         method: 'google',
         email,
         planType: codeAssistResponse.planInfo?.planType,
-        promptCredits: parsePromptCredits(codeAssistResponse)
+        promptCredits: parsePromptCredits(codeAssistResponse),
+        raw: {
+            codeAssistResponse,
+            modelsResponse
+        }
     };
 }
 //# sourceMappingURL=parser.js.map

@@ -16,7 +16,8 @@ export function parseLocalQuotaSnapshot(userStatus: ConnectUserStatus): QuotaSna
     timestamp: new Date().toISOString(),
     method: 'local',
     email: userStatus.email,
-    models: []
+    models: [],
+    raw: userStatus.raw
   }
 
   // Parse prompt credits
