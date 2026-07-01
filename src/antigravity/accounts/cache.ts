@@ -18,6 +18,11 @@ export function isCacheValid(email: string): boolean {
     debug('cache', `No valid cache for ${email}`)
     return false
   }
+
+  if (!supportsWeeklyAwareSchema(cache.data)) {
+    debug('cache', `Cache for ${email} is missing weekly-aware schema, ignoring`)
+    return false
+  }
   
   const cachedAt = new Date(cache.cachedAt).getTime()
   const ttlMs = cache.ttl * 1000
@@ -27,6 +32,15 @@ export function isCacheValid(email: string): boolean {
   debug('cache', `Cache for ${email} is ${isValid ? 'valid' : 'stale'}`)
   
   return isValid
+}
+
+function supportsWeeklyAwareSchema(data: QuotaSnapshot): boolean {
+  if (data.schemaVersion === 2) return true
+
+  return data.models.some((model) => {
+    const legacyWeekly = (model as typeof model & { weeklyRemainingPercentage?: unknown }).weeklyRemainingPercentage
+    return Boolean(model.windows?.weekly || legacyWeekly !== undefined)
+  })
 }
 
 /**
