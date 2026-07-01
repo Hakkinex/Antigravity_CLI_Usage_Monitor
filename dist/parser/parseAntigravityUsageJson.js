@@ -257,7 +257,7 @@ function formatResetFromTimestamp(timestamp) {
     if (!Number.isFinite(resetMs))
         return null;
     const diffSeconds = Math.floor((resetMs - Date.now()) / 1000);
-    return diffSeconds > 0 ? formatResetFromSeconds(diffSeconds) : null;
+    return formatResetFromSeconds(Math.max(0, diffSeconds));
 }
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);

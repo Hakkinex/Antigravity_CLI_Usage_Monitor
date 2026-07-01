@@ -300,7 +300,7 @@ function formatResetFromTimestamp(timestamp: string | undefined): string | null 
   const resetMs = new Date(timestamp).getTime();
   if (!Number.isFinite(resetMs)) return null;
   const diffSeconds = Math.floor((resetMs - Date.now()) / 1000);
-  return diffSeconds > 0 ? formatResetFromSeconds(diffSeconds) : null;
+  return formatResetFromSeconds(Math.max(0, diffSeconds));
 }
 
 function isRecord(value: unknown): value is AnyRecord {
