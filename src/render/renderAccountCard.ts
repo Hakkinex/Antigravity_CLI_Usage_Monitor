@@ -1,6 +1,7 @@
 import type { AccountQuota } from '../types.js';
 import { color, dim, padRight, truncate } from '../utils/text.js';
 import { statusDot } from '../utils/status.js';
+import { buildQuotaGroups } from './quotaGroups.js';
 
 const MODEL_WIDTH = 23;
 const FIVE_HOUR_WIDTH = 12;
@@ -22,12 +23,13 @@ export function renderAccountCard(account: AccountQuota): string[] {
   } else if (account.models.length === 0) {
     lines.push(fullRow(dim('No model quota returned')));
   } else {
-    for (const model of account.models) {
+    const groups = buildQuotaGroups(account.models);
+    for (const group of groups) {
       lines.push(
         row(
-          color(truncate(model.name, MODEL_WIDTH), 223),
-          quotaCell(model.status, model.remainingPercent, model.resetInText),
-          quotaCell(model.weeklyStatus, model.weeklyRemainingPercent, model.weeklyResetInText)
+          color(truncate(group.label, MODEL_WIDTH), 223),
+          quotaCell(group.fiveHour.status, group.fiveHour.remainingPercent, group.fiveHour.resetInText),
+          quotaCell(group.week.status, group.week.remainingPercent, group.week.resetInText)
         )
       );
     }
@@ -38,7 +40,8 @@ export function renderAccountCard(account: AccountQuota): string[] {
 }
 
 function quotaCell(status: Parameters<typeof statusDot>[0], percent: number | null, reset: string | null): string {
-  const remain = percent === null ? '?' : `${percent}%`;
+  if (percent === null) return dim('no data');
+  const remain = `${percent}%`;
   const resetText = compactReset(reset);
   return `${statusDot(status)} ${remain}${resetText ? ` ${resetText}` : ''}`;
 }
