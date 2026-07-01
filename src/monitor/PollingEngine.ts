@@ -1,4 +1,4 @@
-import { fetchAntigravityUsage } from '../providers/AntigravityUsageProvider.js';
+import { fetchAntigravityProvider } from '../providers/AntigravityUsageProvider.js';
 import { fetchMockUsage } from '../providers/mockProvider.js';
 import { parseAntigravityUsageJson } from '../parser/parseAntigravityUsageJson.js';
 import { renderDashboard, renderRefreshLine, type RenderState } from '../render/renderDashboard.js';
@@ -68,7 +68,7 @@ export class PollingEngine {
     try {
       const result = this.options.mock
         ? { ok: true as const, raw: fetchMockUsage(), command: 'mock fixture' }
-        : await fetchAntigravityUsage({ ...this.options, refresh: forceRefresh });
+        : await fetchAntigravityProvider({ ...this.options, refresh: forceRefresh });
 
       if (result.ok) {
         this.state.snapshot = parseAntigravityUsageJson(
@@ -76,7 +76,7 @@ export class PollingEngine {
           this.config,
           // CLI privacy flags are merged into config before the engine is created.
           String(this.options.method),
-          this.options.mock ? 'mock' : 'antigravity-usage'
+          this.options.mock ? 'mock' : 'antigravity'
         );
         this.state.lastError = undefined;
         this.state.command = result.command;

@@ -1,6 +1,6 @@
 import { getModelGroup, getModelStatus } from '../utils/status.js';
 import { maskEmail } from '../utils/maskEmail.js';
-export function parseAntigravityUsageJson(raw, config, method, source = 'antigravity-usage') {
+export function parseAntigravityUsageJson(raw, config, method, source = 'antigravity') {
     const accountsRaw = extractAccounts(raw);
     const accounts = accountsRaw.map((accountRaw, index) => normalizeAccount(accountRaw, index, config));
     return {

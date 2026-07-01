@@ -91,6 +91,8 @@ export function parseModelInfo(name: string, raw: RawModelInfo, now: number = Da
   return {
     name,
     displayName: raw.displayName,
+    label: raw.displayName || name,
+    modelId: name,
     remainingPercentage: legacy?.remainingPercentage,
     isExhausted: legacy?.isExhausted ?? false,
     resetTime: legacy?.resetTime,
@@ -121,8 +123,47 @@ export function parseGoogleModels(raw: RawResponse, ctx: { email: string; now?: 
     schemaVersion: 2,
     email: ctx.email,
     source: 'google',
+    method: 'google',
     timestamp: now,
     models,
     quotaResetTime: earliestIso ?? null
+  };
+}
+
+
+interface CodeAssistResponse {
+  planInfo?: {
+    planType?: string;
+    monthlyPromptCredits?: number;
+  };
+  availablePromptCredits?: number;
+}
+
+function parsePromptCredits(response: CodeAssistResponse) {
+  const monthly = response.planInfo?.monthlyPromptCredits;
+  const available = response.availablePromptCredits;
+  if (monthly === undefined || available === undefined) return undefined;
+  const used = monthly - available;
+  return {
+    available,
+    monthly,
+    usedPercentage: monthly > 0 ? used / monthly : 0,
+    remainingPercentage: monthly > 0 ? available / monthly : 0
+  };
+}
+
+export function parseQuotaSnapshot(
+  codeAssistResponse: CodeAssistResponse,
+  modelsResponse: RawResponse,
+  email?: string
+): QuotaSnapshot {
+  const snapshot = parseGoogleModels(modelsResponse, { email: email ?? '', now: Date.now() });
+  return {
+    ...snapshot,
+    timestamp: new Date(snapshot.timestamp).toISOString(),
+    method: 'google',
+    email,
+    planType: codeAssistResponse.planInfo?.planType,
+    promptCredits: parsePromptCredits(codeAssistResponse)
   };
 }

@@ -17,7 +17,7 @@ export function renderDashboard(state, options) {
     else if (state.lastError) {
         lines.push(color(`Error: ${state.lastError}`, 203));
         lines.push('');
-        lines.push('Configure antigravity-usage auth or local Antigravity access, then run:');
+        lines.push('Configure Antigravity auth or local Antigravity access, then run:');
         lines.push('  agy-monitor watch');
     }
     else {

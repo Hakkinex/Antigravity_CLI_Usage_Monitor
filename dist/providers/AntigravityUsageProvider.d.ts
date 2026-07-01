@@ -1,2 +1,2 @@
 import type { ProviderResult, WatchOptions } from '../types.js';
-export declare function fetchAntigravityUsage(options: WatchOptions): Promise<ProviderResult>;
+export declare function fetchAntigravityProvider(options: WatchOptions): Promise<ProviderResult>;

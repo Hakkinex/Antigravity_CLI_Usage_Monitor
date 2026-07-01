@@ -27,17 +27,17 @@ Usage:
 Options:
   --interval <sec>   Refresh interval, default 60
   --columns <n>      Preferred dashboard columns, default 2
-  --method <name>    antigravity-usage method, default google
+  --method <name>    Data provider method, default google
   --mask-email       Mask account email in card titles
-  --all-models       Pass --all-models to antigravity-usage
+  --all-models       Include autocomplete models when provider supports it
   --refresh          Force refresh on startup and manual refresh
-  --debug            Show wrapper command details
-  --mock             Use bundled fixture instead of antigravity-usage
+  --debug            Show provider details
+  --mock             Use bundled fixture instead of live Antigravity data
 
 Debug dump options:
-  --method <name>    antigravity-usage method, default google
+  --method <name>    Data provider method, default google
   --account <email>  Dump one account instead of all accounts
-  --no-all           Do not pass --all
+  --no-all           Dump active account only
   --use-cache        Allow cached quota data; default forces refresh
   --all-models       Include autocomplete models
   --output <dir>     Output directory, default .agy-monitor-debug

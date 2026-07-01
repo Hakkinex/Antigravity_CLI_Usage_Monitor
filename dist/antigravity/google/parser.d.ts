@@ -21,4 +21,12 @@ export declare function parseGoogleModels(raw: RawResponse, ctx: {
     email: string;
     now?: number;
 }): QuotaSnapshot;
+interface CodeAssistResponse {
+    planInfo?: {
+        planType?: string;
+        monthlyPromptCredits?: number;
+    };
+    availablePromptCredits?: number;
+}
+export declare function parseQuotaSnapshot(codeAssistResponse: CodeAssistResponse, modelsResponse: RawResponse, email?: string): QuotaSnapshot;
 export {};

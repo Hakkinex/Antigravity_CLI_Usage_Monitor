@@ -2,100 +2,68 @@
 
 [English](README.md)
 
-一個只讀的終端機 dashboard，用來同時監控多個 Antigravity CLI 帳號的 quota 狀態。它會包裝 `antigravity-usage`，並用穩定的 2 欄終端機卡片畫面顯示短週期與週用量。
+一個只讀的終端機 dashboard，用來同時監控多個 Antigravity CLI 帳號的 quota 狀態。`agy-monitor` 現在使用內建 Antigravity 資料 provider，該資料層衍生自 `skainguyen1412/antigravity-usage`，安裝 monitor 後就能查詢與呈現 quota。
 
-這個工具刻意只做監控，不做帳號調度。它不會在某個帳號滿額後自動切換到其他帳號，不會執行 wakeup，也不會觸發任何模型請求。
-
-## 目錄
-
-- [安全性](#安全性)
-- [上游資料來源](#上游資料來源)
-- [背景](#背景)
-- [本專案做了什麼](#本專案做了什麼)
-- [功能](#功能)
-- [安裝](#安裝)
-- [使用方式](#使用方式)
-- [資料來源](#資料來源)
-- [內化狀態](#內化狀態)
-- [第三方授權註記](#第三方授權註記)
-- [設定](#設定)
-- [貢獻](#貢獻)
-- [授權](#授權)
+這個工具只做監控，不做帳號調度。它不會在某個帳號滿額後自動切換帳號，不會執行 wakeup，也不會觸發任何模型請求。
 
 ## 安全性
 
-`agy-monitor` 只會透過 `antigravity-usage` 呼叫 quota / read 類型指令。
+`agy-monitor` 只會透過內建 provider 執行 quota/read 類型操作。
 
 它不會：
 
-- 登入帳號
-- 為了工作調度切換帳號
+- 為工作調度切換帳號
 - 呼叫 wakeup
-- 直接讀取或修改 token 檔案
-- 儲存 token
+- 在 Antigravity 相容設定與 cache 路徑之外儲存 token
 - 把帳號或 quota 資料傳送到外部服務
 
-請勿提交真實帳號 token、private key、`.env` 檔案，或包含私人帳號資料的原始 quota 輸出。
+請勿提交真實帳號 token、private key、`.env` 檔案，或包含私人帳號資料的 debug 原始輸出。
 
-## 上游資料來源
+## 參考上游
 
-本專案建立在 [skainguyen1412/antigravity-usage](https://github.com/skainguyen1412/antigravity-usage) 產出的 quota 資料之上。`antigravity-usage` 負責 Antigravity quota 查詢，包含本機 IDE 存取、Google 帳號存取、多帳號 quota 讀取、JSON 輸出、cache，以及 provider 相關的請求細節。
+本專案參考並衍生部分資料層自 [skainguyen1412/antigravity-usage](https://github.com/skainguyen1412/antigravity-usage)。該專案提供原始的帳號/token 存取模式、Google/local quota request 流程、cache 行為與 response parser 結構。
 
-`agy-monitor` 目前不重新實作帳號登入、token 處理、wakeup 行為或 Antigravity API 存取。它會使用 `antigravity-usage` 回傳的結構化 JSON，並專注在把結果整理成容易閱讀的監控 dashboard。
+`agy-monitor` 已將 provider 程式碼內化到 `src/antigravity/`，並針對監控用途做調整：
 
-本 repo 已開始內化 Antigravity 資料層的 parser/type 邊界，來源與授權記錄在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- 透過 `src/antigravity/api.ts` 提供本機 facade，不再 spawn 外部 CLI
+- 將 Google `quotaInfos[]` 正規化成 `windows.fiveHour` 與 `windows.weekly`
+- 在 monitor process 內完成多帳號 quota 讀取
+- 需要時把舊 `antigravity-usage` config 一次性匯入到 `agy-monitor` config namespace
+- 移除 `antigravity-usage` npm dependency 與 binary lookup
 
-## 背景
-
-Antigravity CLI 使用者常會同時管理多個帳號，因此需要一個不用逐一手動查詢、可以快速看懂 quota 狀態的工具。`agy-monitor` 專注在一件事：在終端機中清楚顯示所有帳號的用量狀態。
-
-v0.1 使用 `antigravity-usage` 作為資料來源，並用輕量 ANSI dashboard 呈現，不使用大型 TUI framework。
-
-## 本專案做了什麼
-
-- 將 `antigravity-usage` 納入 npm dependency，不需要另外全域安裝資料來源工具。
-- 優先解析本地 `node_modules/.bin/antigravity-usage` binary，並保留 `PATH` fallback 支援既有全域安裝。
-- 只呼叫 read-only quota 指令，帳號登入、token 管理與 wakeup 行為仍由 monitor 之外的工具負責。
-- 將 provider JSON 正規化成帳號卡片、quota 群組、狀態顏色、reset timer 與穩定的終端機輸出。
-- 支援解析 Google `quotaInfos[]` / `windows.weekly` schema，當資料來源提供 weekly window 時可顯示 Week 欄位。
-- 提供 mock fixture 模式，可以不使用真實帳號資料就測試 dashboard layout。
-- 提供 `debug-dump`，用來檢查原始 provider JSON 與可能的 quota 欄位，方便追蹤 upstream 輸出變化。
+來源註記與 MIT license 文字請見 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 功能
 
 - 2 欄終端機卡片 dashboard。
 - 多帳號 quota 監控。
-- 預設顯示完整 email。
-- 可選擇遮罩 email。
-- 同一列顯示短週期 quota 與週 quota。
+- 預設顯示完整 email，可選擇遮罩。
+- 同一列顯示五小時 quota 與週 quota。
 - 顯示剩餘百分比、reset time 與彩色狀態點。
-- 自動刷新。
-- 按 `r` 手動刷新。
-- 按 `q` 離開。
-- 類似 `docker stats` 的穩定重繪，不持續追加輸出。
+- 自動刷新，按 `r` 手動刷新。
+- 類似 `docker stats` 的穩定重繪。
 - mock fixture 模式，方便本機測試畫面。
+- `debug-dump` 可檢查正規化後的 provider output。
 - 可設定 alias、門檻、刷新間隔、method 與欄數。
 
 畫面列範例：
 
 ```text
 Model                  5h             Week
-Gemini 3 Pro (High)    ● 100% 4h25m   ● 92% 3d4h
+Gemini 3 Pro (High)    * 100% 4h25m   * 92% 3d4h
 ```
 
 ## 安裝
 
-本專案使用 npm，請以 `package-lock.json` 作為標準 lockfile。
-
-`antigravity-usage` 已作為專案 dependency 安裝，不需要另外全域安裝資料來源工具。
-
-安裝本專案：
+本專案使用 npm，`package-lock.json` 是標準 lockfile。
 
 ```bash
 npm install
 npm run build
 npm link
 ```
+
+不需要另外安裝 `antigravity-usage`。
 
 ## 使用方式
 
@@ -108,48 +76,32 @@ agy-monitor watch
 使用 mock 資料測試畫面：
 
 ```bash
-npm run dev
-```
-
-或：
-
-```bash
 agy-monitor watch --mock
 ```
 
-### 參數
+參數：
 
 | 參數 | 預設 | 說明 |
 | --- | --- | --- |
 | `--interval <sec>` | `60` | 資料刷新間隔。 |
 | `--columns <n>` | `2` | 帳號卡片偏好的欄數。 |
-| `--method <name>` | `google` | 傳給 `antigravity-usage` 的 method。 |
+| `--method <name>` | `google` | Provider method：`google`、`local` 或 `auto`。 |
 | `--refresh` | `false` | 啟動時強制刷新。 |
 | `--mask-email` | `false` | 遮罩卡片標題中的帳號 email。 |
-| `--all-models` | `false` | 將 `--all-models` 傳給 `antigravity-usage`。 |
-| `--debug` | `false` | 顯示 provider 指令細節。 |
+| `--all-models` | `false` | Provider 支援時納入 autocomplete models。 |
+| `--debug` | `false` | 顯示 provider 細節。 |
 | `--mock` | `false` | 使用內建 fixture 資料。 |
 
-### 快捷鍵
+快捷鍵：
 
 | 按鍵 | 說明 |
 | --- | --- |
 | `r` | 立即刷新。 |
 | `q` | 離開。 |
 
-### 指令
+## Debug Dump
 
-| 指令 | 說明 |
-| --- | --- |
-| `npm run dev` | 使用內建 mock 資料啟動監控。 |
-| `npm run build` | 將 TypeScript 編譯到 `dist/`。 |
-| `npm start` | 執行已編譯版本。 |
-| `npm test` | 執行 Vitest 測試。 |
-| `npm run typecheck` | 執行 TypeScript 檢查但不輸出檔案。 |
-
-### Debug Dump
-
-若要檢查 monitor 實際取得的 `antigravity-usage` 原始 response：
+檢查內建 provider 正規化輸出：
 
 ```bash
 agy-monitor debug-dump --method google
@@ -157,52 +109,33 @@ agy-monitor debug-dump --method google
 
 這會把 debug 檔案寫到 `.agy-monitor-debug/`：
 
-- `antigravity-usage-stdout-*.json`
-- `antigravity-usage-stderr-*.log`
+- `antigravity-provider-stdout-*.json`
+- `antigravity-provider-stderr-*.log`
 - `analysis-*.json`
-
-`analysis` 檔會掃描 stdout JSON 與 debug stderr 區塊，列出可能與 quota 有關的路徑，例如 `weekly`、`week`、`quota`、`reset`、`remaining`、`period`、`window`。
-
-Debug dump 預設會強制發出 fresh upstream request。只有在你刻意想檢查 cached snapshot 時，才使用 `--use-cache`。
 
 請勿提交 `.agy-monitor-debug/`，裡面可能包含帳號 email 或原始 quota 資料。
 
 ## 資料來源
 
-預設 wrapper 指令會優先使用本地安裝的 provider binary：
+Runtime quota fetching 已內化。`agy-monitor` 會呼叫 `src/antigravity/api.ts`，再使用內建 Google/local provider implementation 與 cache helper。這些資料層程式碼衍生自上游專案，並針對 monitor 調整。
 
-```bash
-node_modules/.bin/antigravity-usage quota --all --json --method google
-```
+Monitor parser 可讀取內建 provider shape 與相容的歷史 JSON shape，包含：
 
-如果本地 dependency 不可用，`agy-monitor` 會 fallback 到 `PATH` 裡的 `antigravity-usage`。如果 provider 不支援 `quota` 子指令形式，`agy-monitor` 會 fallback 到：
+- `quotaInfos[]`
+- `windows.fiveHour`
+- `windows.weekly`
+- `weeklyRemainingPercentage`、`weeklyResetTime`、`weeklyTimeUntilResetMs`
 
-```bash
-node_modules/.bin/antigravity-usage --all --json --method google
-```
+設定會存放在 `agy-monitor` namespace。如果本機只有舊 `antigravity-usage` config，且尚未建立 `agy-monitor` config，provider 會為相容性做一次性匯入。
 
-`--refresh` 只會在使用者要求啟動強制刷新，或手動刷新時傳入。
+## 環境變數
 
-Week 欄位可讀取 `weeklyRemainingPercentage`、`weeklyResetTime`、`weeklyTimeUntilResetMs`、Google `quotaInfos[]`，或內化 parser 產出的 `windows.weekly`。目前真實資料 fetch 仍透過 bundled `antigravity-usage` CLI；完整 auth/token/fetch 內化完成前，若該 CLI 的 JSON 沒有 weekly window，Week 欄仍會顯示 `no data`。
+Google OAuth token refresh/login 流程需要透過環境變數提供 credential。不要把這些值 hardcode 或提交到 git。
 
-## 內化狀態
-
-已完成：
-
-- `src/antigravity/quota/types.ts`：新增 `QuotaWindow` 與 `windows.fiveHour` / `windows.weekly` 型別。
-- `src/antigravity/google/parser.ts`：解析 Google `quotaInfos[]`，用 `windowId` / `windowLabel` 分類 five-hour 與 weekly window。
-- `src/parser/parseAntigravityUsageJson.ts`：現有 monitor parser 可消費 `quotaInfos[]` 與 `windows.weekly`。
-- `test/antigravity/google-parser.test.ts` 與 `test/parser.test.ts`：補上 weekly fixture 測試。
-
-尚未完成：
-
-- auth/token 管理與 Google/local fetch 仍未完整內化。
-- runtime provider 目前仍呼叫 bundled `antigravity-usage` CLI。
-- `package.json` 仍保留 `antigravity-usage` dependency，直到 fetch layer 內化完成。
-
-## 第三方授權註記
-
-`src/antigravity/` 的部分 parser/type 設計衍生自 `skainguyen1412/antigravity-usage`，並已針對 `agy-monitor` 加入 weekly quota window normalization。來源 commit 與 MIT license 內容請見 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+| 變數 | 說明 |
+| --- | --- |
+| `ANTIGRAVITY_OAUTH_CLIENT_ID` | 內建 provider 使用的 Google OAuth client id。 |
+| `ANTIGRAVITY_OAUTH_CLIENT_SECRET` | 內建 provider 使用的 Google OAuth client secret。 |
 
 ## 設定
 
@@ -233,16 +166,15 @@ Week 欄位可讀取 `weeklyRemainingPercentage`、`weeklyResetTime`、`weeklyTi
 }
 ```
 
-## 貢獻
+## 開發
 
-請保持變更範圍明確，並維持只讀監控的邊界。
+```bash
+npm test
+npm run typecheck
+npm run build
+```
 
-- Provider 程式碼放在 `src/providers/`。
-- JSON 正規化放在 `src/parser/`。
-- 終端機畫面渲染放在 `src/render/`。
-- 不加入帳號切換、wakeup 或任何會消耗 quota 的行為。
-- 修改 parser、layout 或刷新行為時，請新增或更新測試。
-- 送出前執行 `npm test` 與 `npm run build`。
+Provider 程式碼放在 `src/antigravity/`，monitor 正規化與畫面渲染分別放在 `src/parser/` 與 `src/render/`。不要加入帳號切換、wakeup 或任何會消耗 quota 的行為。
 
 ## 授權
 

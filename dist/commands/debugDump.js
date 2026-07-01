@@ -1,17 +1,15 @@
-import { execFile } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import { resolveAntigravityUsageCommand } from '../providers/antigravityUsageCommand.js';
-const TIMEOUT_MS = 60_000;
+import { fetchAllQuotaSnapshots } from '../antigravity/api.js';
 const ALLOWED_METHODS = new Set(['google', 'local', 'auto']);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function runDebugDump(argv) {
     const options = parseDebugDumpOptions(argv);
     mkdirSync(options.outputDir, { recursive: true });
-    const result = await runAntigravityUsageDebug(options);
+    const result = await runInternalProviderDebug(options);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const stdoutPath = resolve(options.outputDir, `antigravity-usage-stdout-${timestamp}.json`);
-    const stderrPath = resolve(options.outputDir, `antigravity-usage-stderr-${timestamp}.log`);
+    const stdoutPath = resolve(options.outputDir, `antigravity-provider-stdout-${timestamp}.json`);
+    const stderrPath = resolve(options.outputDir, `antigravity-provider-stderr-${timestamp}.log`);
     const analysisPath = resolve(options.outputDir, `analysis-${timestamp}.json`);
     writeFileSync(stdoutPath, result.stdout || '', { encoding: 'utf8', mode: 0o600 });
     writeFileSync(stderrPath, result.stderr || result.errorMessage || '', { encoding: 'utf8', mode: 0o600 });
@@ -49,33 +47,42 @@ function parseDebugDumpOptions(argv) {
         outputDir: resolveOutputDir(readValue('--output') ?? '.agy-monitor-debug')
     };
 }
-function buildArgs(options) {
-    const args = ['--debug', 'quota', '--json', '--method', String(options.method)];
-    if (options.all && !options.account)
-        args.push('--all');
-    if (options.account)
-        args.push('--account', options.account);
-    if (options.refresh)
-        args.push('--refresh');
-    if (options.allModels)
-        args.push('--all-models');
-    return args;
-}
-function runAntigravityUsageDebug(options) {
-    const args = buildArgs(options);
-    const binary = resolveAntigravityUsageCommand();
-    const command = `${binary.displayName} ${args.join(' ')}`;
-    return new Promise((resolveResult) => {
-        execFile(binary.executable, args, { timeout: TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
-            resolveResult({
-                exitCode: typeof error?.code === 'number' ? error.code : error ? null : 0,
-                command,
-                stdout,
-                stderr,
-                errorMessage: error?.message
-            });
+async function runInternalProviderDebug(options) {
+    const command = buildDebugCommand(options);
+    try {
+        const raw = await fetchAllQuotaSnapshots({
+            method: options.method,
+            accountEmail: options.account,
+            refresh: options.refresh
         });
-    });
+        return {
+            exitCode: raw.some((result) => result.status === 'success' || result.status === 'cached') ? 0 : 1,
+            command,
+            stdout: JSON.stringify(raw, null, 2),
+            stderr: ''
+        };
+    }
+    catch (error) {
+        return {
+            exitCode: 1,
+            command,
+            stdout: '',
+            stderr: '',
+            errorMessage: error instanceof Error ? error.message : String(error)
+        };
+    }
+}
+function buildDebugCommand(options) {
+    const flags = ['debug-dump', '--method', String(options.method)];
+    if (!options.all)
+        flags.push('--no-all');
+    if (options.account)
+        flags.push('--account', options.account);
+    if (!options.refresh)
+        flags.push('--use-cache');
+    if (options.allModels)
+        flags.push('--all-models');
+    return 'internal-antigravity ' + flags.join(' ');
 }
 function normalizeMethod(value) {
     if (!ALLOWED_METHODS.has(value)) {
@@ -128,7 +135,7 @@ function analyzeDebugOutput(result) {
                 ? 'This dump used cached quota data. Re-run debug-dump without --use-cache to force a fresh upstream request.'
                 : 'This dump appears to use fresh quota data rather than cached quota snapshots.',
             'Look for weekly, week, quota, limit, reset, remaining, rolling, period, or window fields in candidatePaths.',
-            'If weekly quota is present in stderr raw API blocks but absent from stdout JSON, patch antigravity-usage parser/types.',
+            'If weekly quota is present in raw API blocks but absent from normalized JSON, patch the internal parser/types.',
             'If weekly quota is absent from fetchAvailableModels, inspect Antigravity local Connect API or native CLI network calls.'
         ]
     };

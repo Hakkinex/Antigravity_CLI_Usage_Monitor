@@ -1,6 +1,6 @@
 {
   "name": "agy-monitor",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Read-only terminal dashboard for monitoring Antigravity CLI quota across multiple accounts.",
   "type": "module",
   "bin": {
@@ -31,6 +31,8 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
-    "antigravity-usage": "^0.2.9"
+    "cli-table3": "^0.6.5",
+    "inquirer": "^14.0.2",
+    "open": "^11.0.0"
   }
 }

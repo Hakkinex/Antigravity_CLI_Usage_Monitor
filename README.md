@@ -2,100 +2,68 @@
 
 [繁體中文](README_CN.md)
 
-A read-only terminal dashboard for monitoring Antigravity CLI quota across multiple accounts. It wraps `antigravity-usage` and presents short-window and weekly quota in a stable two-column terminal view.
+A read-only terminal dashboard for monitoring Antigravity CLI quota across multiple accounts. `agy-monitor` now uses an internal Antigravity data provider derived from `skainguyen1412/antigravity-usage`, so installing the monitor is enough for quota fetching and rendering.
 
-The monitor is intentionally not an account scheduler. It does not switch accounts when one account is full, does not run wakeup commands, and does not trigger model requests.
-
-## Table of Contents
-
-- [Security](#security)
-- [Upstream Data Provider](#upstream-data-provider)
-- [Background](#background)
-- [What This Project Adds](#what-this-project-adds)
-- [Features](#features)
-- [Install](#install)
-- [Usage](#usage)
-- [Data Source](#data-source)
-- [Internalization Status](#internalization-status)
-- [Third-Party Notices](#third-party-notices)
-- [Config](#config)
-- [Contributing](#contributing)
-- [License](#license)
+The monitor is not an account scheduler. It does not switch accounts for workload routing, run wakeup commands, or trigger model requests.
 
 ## Security
 
-`agy-monitor` only calls quota/read commands through `antigravity-usage`.
+`agy-monitor` only performs quota/read operations through its internal provider.
 
 It does not:
 
-- log in to accounts
-- switch accounts for workload routing
+- route workloads between accounts
 - call wakeup
-- read or modify token files directly
-- store tokens
-- send account or quota data to any external service
+- store tokens outside the Antigravity-compatible config/cache paths
+- send account or quota data to an external service
 
-Do not commit real account tokens, private keys, `.env` files, or raw quota output that contains private account data.
+Do not commit real account tokens, private keys, `.env` files, or raw debug output that contains private account data.
 
-## Upstream Data Provider
+## Upstream Reference
 
-This project builds on the quota data produced by [skainguyen1412/antigravity-usage](https://github.com/skainguyen1412/antigravity-usage). `antigravity-usage` handles the Antigravity quota lookup, including local IDE access, Google account access, multi-account quota reads, JSON output, caching, and provider-specific request details.
+This project references and derives part of its Antigravity data layer from [skainguyen1412/antigravity-usage](https://github.com/skainguyen1412/antigravity-usage). That project provided the original account/token access patterns, Google/local quota request flow, cache behavior, and response parsing shape.
 
-`agy-monitor` currently does not reimplement account login, token handling, wakeup behavior, or Antigravity API access. It consumes the structured JSON returned by `antigravity-usage` and focuses on presenting that result as a readable monitoring dashboard.
+`agy-monitor` internalizes that provider code under `src/antigravity/` and adapts it for monitor usage:
 
-This repo has started internalizing the Antigravity parser/type boundary. Source attribution and license details are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- exposes a local facade in `src/antigravity/api.ts` instead of spawning an external CLI
+- normalizes Google `quotaInfos[]` into `windows.fiveHour` and `windows.weekly`
+- keeps multi-account quota reads inside the monitor process
+- imports legacy `antigravity-usage` config once into the `agy-monitor` config namespace when needed
+- removes the npm dependency and binary lookup for `antigravity-usage`
 
-## Background
-
-Antigravity CLI users often work with multiple accounts and need a quick way to see quota status without manually checking each account. `agy-monitor` focuses on one job: show all account quota states clearly in the terminal.
-
-Version 0.1 uses `antigravity-usage` as the data provider and renders a lightweight ANSI dashboard instead of a heavy TUI framework.
-
-## What This Project Adds
-
-- Bundles `antigravity-usage` as an npm dependency so a separate global provider install is not required.
-- Resolves the local `node_modules/.bin/antigravity-usage` binary first, with a `PATH` fallback for existing global installs.
-- Calls read-only quota commands and keeps account login, token management, and wakeup behavior outside the monitor.
-- Normalizes the provider JSON into account cards, quota groups, status colors, reset timers, and stable terminal output.
-- Supports Google `quotaInfos[]` / `windows.weekly` parsing so the Week column can render when the data source provides a weekly window.
-- Adds mock fixture mode so the dashboard layout can be tested without real account data.
-- Adds `debug-dump` to inspect raw provider JSON and candidate quota fields when upstream output changes.
+Source attribution and MIT license text are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Features
 
 - Two-column terminal card dashboard.
 - Multi-account quota monitoring.
-- Full account email shown by default.
-- Optional email masking.
-- Short-window quota and weekly quota on the same row.
+- Full account email shown by default, with optional masking.
+- Five-hour and weekly quota on the same row.
 - Remaining percentage, reset time, and color status dot.
-- Automatic refresh interval.
-- Manual refresh with `r`.
-- Quit with `q`.
+- Automatic refresh and manual refresh with `r`.
 - Stable repaint behavior similar to `docker stats`.
 - Mock fixture mode for local UI testing.
+- `debug-dump` for inspecting normalized provider output.
 - Configurable aliases, thresholds, refresh interval, method, and column count.
 
 Example row:
 
 ```text
 Model                  5h             Week
-Gemini 3 Pro (High)    ● 100% 4h25m   ● 92% 3d4h
+Gemini 3 Pro (High)    * 100% 4h25m   * 92% 3d4h
 ```
 
 ## Install
 
-This project uses npm. `package-lock.json` is the canonical lockfile.
-
-`antigravity-usage` is installed as a project dependency. No separate global install is required for the data provider.
-
-Install this project locally:
+This project uses npm and `package-lock.json` is the canonical lockfile.
 
 ```bash
 npm install
 npm run build
 npm link
 ```
+
+No separate `antigravity-usage` install is required.
 
 ## Usage
 
@@ -108,48 +76,32 @@ agy-monitor watch
 Run with mock data:
 
 ```bash
-npm run dev
-```
-
-or:
-
-```bash
 agy-monitor watch --mock
 ```
 
-### Options
+Options:
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `--interval <sec>` | `60` | Data refresh interval. |
 | `--columns <n>` | `2` | Preferred account card columns. |
-| `--method <name>` | `google` | Method passed to `antigravity-usage`. |
+| `--method <name>` | `google` | Provider method: `google`, `local`, or `auto`. |
 | `--refresh` | `false` | Force refresh on startup. |
 | `--mask-email` | `false` | Mask account email in card titles. |
-| `--all-models` | `false` | Pass `--all-models` to `antigravity-usage`. |
-| `--debug` | `false` | Show provider command details. |
+| `--all-models` | `false` | Include autocomplete models when supported. |
+| `--debug` | `false` | Show provider details. |
 | `--mock` | `false` | Use bundled fixture data. |
 
-### Keyboard
+Keyboard:
 
 | Key | Description |
 | --- | --- |
 | `r` | Refresh now. |
 | `q` | Quit. |
 
-### Commands
+## Debug Dump
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Run the monitor with bundled mock data. |
-| `npm run build` | Compile TypeScript to `dist/`. |
-| `npm start` | Run the compiled monitor. |
-| `npm test` | Run Vitest tests. |
-| `npm run typecheck` | Run TypeScript without emitting files. |
-
-### Debug Dump
-
-To inspect the raw `antigravity-usage` response used by the monitor:
+Inspect normalized internal provider output:
 
 ```bash
 agy-monitor debug-dump --method google
@@ -157,52 +109,33 @@ agy-monitor debug-dump --method google
 
 This writes local debug files to `.agy-monitor-debug/`:
 
-- `antigravity-usage-stdout-*.json`
-- `antigravity-usage-stderr-*.log`
+- `antigravity-provider-stdout-*.json`
+- `antigravity-provider-stderr-*.log`
 - `analysis-*.json`
 
-The analysis file scans stdout JSON and debug stderr blocks for candidate quota paths such as `weekly`, `week`, `quota`, `reset`, `remaining`, `period`, and `window`.
-
-Debug dump forces a fresh upstream request by default. Use `--use-cache` only when you intentionally want to inspect cached snapshots.
-
-Do not commit `.agy-monitor-debug/`; it can contain account emails or raw quota data.
+Do not commit `.agy-monitor-debug/` because it can contain account emails or raw quota data.
 
 ## Data Source
 
-The default wrapper command uses the locally installed provider binary when available:
+Runtime quota fetching is internal. `agy-monitor` calls `src/antigravity/api.ts`, which uses the internal Google/local provider implementation and cache helpers derived from the upstream project.
 
-```bash
-node_modules/.bin/antigravity-usage quota --all --json --method google
-```
+The monitor parser accepts both the internal provider shape and compatible historical JSON shapes, including:
 
-If the local dependency is unavailable, `agy-monitor` falls back to `antigravity-usage` from `PATH`. If the provider does not support the `quota` subcommand form, `agy-monitor` falls back to:
+- `quotaInfos[]`
+- `windows.fiveHour`
+- `windows.weekly`
+- `weeklyRemainingPercentage`, `weeklyResetTime`, and `weeklyTimeUntilResetMs`
 
-```bash
-node_modules/.bin/antigravity-usage --all --json --method google
-```
+Config is stored under `agy-monitor`. If a legacy `antigravity-usage` config exists and `agy-monitor` config does not, the provider imports it once for compatibility.
 
-`--refresh` is passed only on startup when requested, or during manual refresh.
+## Environment Variables
 
-The Week column can read `weeklyRemainingPercentage`, `weeklyResetTime`, `weeklyTimeUntilResetMs`, Google `quotaInfos[]`, or the internal parser output shape `windows.weekly`. Runtime fetching still uses the bundled `antigravity-usage` CLI; until the auth/token/fetch layer is fully internalized, the Week column will still show `no data` when that CLI JSON does not include a weekly window.
+Google OAuth token refresh/login flows require credentials to be supplied by environment variables. Do not hardcode or commit them.
 
-## Internalization Status
-
-Completed:
-
-- `src/antigravity/quota/types.ts`: adds `QuotaWindow` and `windows.fiveHour` / `windows.weekly` types.
-- `src/antigravity/google/parser.ts`: parses Google `quotaInfos[]` and classifies five-hour vs weekly windows by `windowId` / `windowLabel`.
-- `src/parser/parseAntigravityUsageJson.ts`: lets the current monitor parser consume `quotaInfos[]` and `windows.weekly`.
-- `test/antigravity/google-parser.test.ts` and `test/parser.test.ts`: add weekly fixture coverage.
-
-Not completed yet:
-
-- Auth/token management and Google/local fetch are not fully internalized.
-- The runtime provider still calls the bundled `antigravity-usage` CLI.
-- `package.json` still keeps the `antigravity-usage` dependency until the fetch layer is internalized.
-
-## Third-Party Notices
-
-Parts of the parser/type design under `src/antigravity/` are derived from `skainguyen1412/antigravity-usage` and modified for `agy-monitor` weekly quota window normalization. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the upstream commit and MIT license text.
+| Variable | Description |
+| --- | --- |
+| `ANTIGRAVITY_OAUTH_CLIENT_ID` | Google OAuth client id used by the internal provider. |
+| `ANTIGRAVITY_OAUTH_CLIENT_SECRET` | Google OAuth client secret used by the internal provider. |
 
 ## Config
 
@@ -233,16 +166,15 @@ Example:
 }
 ```
 
-## Contributing
+## Development
 
-Keep changes focused and preserve the read-only monitoring boundary.
+```bash
+npm test
+npm run typecheck
+npm run build
+```
 
-- Keep provider code inside `src/providers/`.
-- Keep JSON normalization inside `src/parser/`.
-- Keep terminal rendering inside `src/render/`.
-- Do not add account switching, wakeup, or quota-consuming behavior.
-- Add or update tests when changing parser, layout, or refresh behavior.
-- Run `npm test` and `npm run build` before shipping changes.
+Keep provider code inside `src/antigravity/` and monitor normalization/rendering inside `src/parser/` and `src/render/`. Do not add account switching, wakeup, or quota-consuming behavior.
 
 ## License
 

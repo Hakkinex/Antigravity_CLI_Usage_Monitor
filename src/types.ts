@@ -14,7 +14,7 @@ export type AccountStatus = 'ok' | 'warning' | 'error';
 
 export type MonitorSnapshot = {
   fetchedAt: string;
-  source: 'antigravity-usage' | 'mock';
+  source: 'antigravity' | 'mock';
   method: MonitorMethod;
   accounts: AccountQuota[];
   errors: MonitorError[];

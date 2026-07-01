@@ -8,7 +8,7 @@ export function parseAntigravityUsageJson(
   raw: unknown,
   config: MonitorConfig,
   method: string,
-  source: 'antigravity-usage' | 'mock' = 'antigravity-usage'
+  source: 'antigravity' | 'mock' = 'antigravity'
 ): MonitorSnapshot {
   const accountsRaw = extractAccounts(raw);
   const accounts = accountsRaw.map((accountRaw, index) => normalizeAccount(accountRaw, index, config));

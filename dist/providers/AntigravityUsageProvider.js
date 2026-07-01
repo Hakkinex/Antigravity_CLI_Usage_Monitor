@@ -1,72 +1,46 @@
-import { execFile } from 'node:child_process';
-import { resolveAntigravityUsageCommand } from './antigravityUsageCommand.js';
-const TIMEOUT_MS = 30_000;
+import { fetchAllQuotaSnapshots } from '../antigravity/api.js';
 const ALLOWED_METHODS = new Set(['google', 'local', 'auto']);
-export async function fetchAntigravityUsage(options) {
-    const attempts = buildAttempts(options);
-    const binary = resolveAntigravityUsageCommand();
-    for (const args of attempts) {
-        const command = `${binary.displayName} ${args.join(' ')}`;
-        const result = await runAntigravityUsage(binary.executable, args);
-        if (result.ok)
-            return { ok: true, raw: result.raw, command };
-        if (!isLikelySubcommandProblem(result.error.message)) {
-            return { ok: false, error: result.error, command };
-        }
-    }
-    return {
-        ok: false,
-        error: {
-            scope: 'global',
-            message: 'antigravity-usage failed with both quota and root command forms'
-        }
-    };
-}
-function buildAttempts(options) {
+export async function fetchAntigravityProvider(options) {
     const method = normalizeMethod(String(options.method));
-    const flags = ['--all', '--json', '--method', method];
-    if (options.allModels)
-        flags.push('--all-models');
+    const command = buildCommand(method, options);
+    try {
+        const raw = await fetchAllQuotaSnapshots({ method, refresh: options.refresh });
+        const hasSuccess = raw.some((result) => result.status === 'success' || result.status === 'cached');
+        if (hasSuccess)
+            return { ok: true, raw, command };
+        return {
+            ok: false,
+            error: {
+                scope: 'global',
+                message: raw.map((result) => (result.status === 'error' ? result.error : '')).filter(Boolean).join('; ') ||
+                    'Internal Antigravity provider did not return quota data',
+                raw
+            },
+            command
+        };
+    }
+    catch (error) {
+        return {
+            ok: false,
+            error: {
+                scope: 'global',
+                message: error instanceof Error ? error.message : String(error)
+            },
+            command
+        };
+    }
+}
+function buildCommand(method, options) {
+    const flags = ['watch', '--method', method];
     if (options.refresh)
         flags.push('--refresh');
-    return [['quota', ...flags], flags];
-}
-function runAntigravityUsage(executable, args) {
-    return new Promise((resolve) => {
-        execFile(executable, args, { timeout: TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
-            if (error) {
-                resolve({
-                    ok: false,
-                    error: {
-                        scope: 'global',
-                        message: stderr.trim() || error.message
-                    }
-                });
-                return;
-            }
-            try {
-                resolve({ ok: true, raw: JSON.parse(stdout) });
-            }
-            catch (parseError) {
-                resolve({
-                    ok: false,
-                    error: {
-                        scope: 'global',
-                        message: `antigravity-usage did not return valid JSON: ${parseError.message}`,
-                        raw: stdout
-                    }
-                });
-            }
-        });
-    });
-}
-function isLikelySubcommandProblem(message) {
-    const lower = message.toLowerCase();
-    return lower.includes('unknown command') || lower.includes('invalid command') || lower.includes('unexpected argument');
+    if (options.allModels)
+        flags.push('--all-models');
+    return 'internal-antigravity ' + flags.join(' ');
 }
 function normalizeMethod(value) {
     if (!ALLOWED_METHODS.has(value)) {
-        throw new Error(`Invalid method: ${value}. Expected one of google, local, auto.`);
+        throw new Error('Invalid method: ' + value + '. Expected one of google, local, auto.');
     }
     return value;
 }
