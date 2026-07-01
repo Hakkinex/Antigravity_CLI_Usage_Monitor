@@ -45,7 +45,7 @@ export function renderDashboard(state: RenderState, options: WatchOptions): stri
   lines.push('');
 
   if (state.snapshot && state.snapshot.accounts.length > 0) {
-    lines.push(layoutCards(state.snapshot.accounts.map(renderAccountCard), options.columns, terminalWidth));
+    lines.push(layoutCards(state.snapshot.accounts.map((account) => renderAccountCard(account, options)), options.columns, terminalWidth));
   } else if (state.lastError) {
     lines.push(color(`Error: ${state.lastError}`, 203));
     lines.push('');

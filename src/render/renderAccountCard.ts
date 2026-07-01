@@ -1,4 +1,4 @@
-import type { AccountQuota } from '../types.js';
+import type { AccountQuota, WatchOptions } from '../types.js';
 import { color, dim, padRight, truncate } from '../utils/text.js';
 import { statusDot } from '../utils/status.js';
 import { buildQuotaGroups } from './quotaGroups.js';
@@ -8,7 +8,7 @@ const FIVE_HOUR_WIDTH = 12;
 const WEEK_WIDTH = 12;
 const CARD_WIDTH = MODEL_WIDTH + FIVE_HOUR_WIDTH + WEEK_WIDTH + 10;
 
-export function renderAccountCard(account: AccountQuota): string[] {
+export function renderAccountCard(account: AccountQuota, options: Pick<WatchOptions, 'allModels'> = { allModels: false }): string[] {
   const title = ` ${account.displayName} `;
   const lines = [
     `${title}${'─'.repeat(Math.max(0, CARD_WIDTH - title.length))}`,
@@ -23,7 +23,10 @@ export function renderAccountCard(account: AccountQuota): string[] {
   } else if (account.models.length === 0) {
     lines.push(fullRow(dim('No model quota returned')));
   } else {
-    const groups = buildQuotaGroups(account.models);
+    const visibleModels = options.allModels
+      ? account.models
+      : account.models.filter((model) => !model.isAutocompleteOnly && model.group !== 'other');
+    const groups = buildQuotaGroups(visibleModels);
     for (const group of groups) {
       lines.push(
         row(

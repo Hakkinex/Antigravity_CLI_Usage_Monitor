@@ -5,7 +5,7 @@ const MODEL_WIDTH = 23;
 const FIVE_HOUR_WIDTH = 12;
 const WEEK_WIDTH = 12;
 const CARD_WIDTH = MODEL_WIDTH + FIVE_HOUR_WIDTH + WEEK_WIDTH + 10;
-export function renderAccountCard(account) {
+export function renderAccountCard(account, options = { allModels: false }) {
     const title = ` ${account.displayName} `;
     const lines = [
         `${title}${'─'.repeat(Math.max(0, CARD_WIDTH - title.length))}`,
@@ -21,7 +21,10 @@ export function renderAccountCard(account) {
         lines.push(fullRow(dim('No model quota returned')));
     }
     else {
-        const groups = buildQuotaGroups(account.models);
+        const visibleModels = options.allModels
+            ? account.models
+            : account.models.filter((model) => !model.isAutocompleteOnly && model.group !== 'other');
+        const groups = buildQuotaGroups(visibleModels);
         for (const group of groups) {
             lines.push(row(color(truncate(group.label, MODEL_WIDTH), 223), quotaCell(group.fiveHour.status, group.fiveHour.remainingPercent, group.fiveHour.resetInText), quotaCell(group.week.status, group.week.remainingPercent, group.week.resetInText)));
         }

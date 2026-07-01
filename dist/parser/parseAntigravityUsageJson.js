@@ -207,6 +207,14 @@ function firstRecord(record, keys) {
     }
     return undefined;
 }
+function firstBoolean(record, keys) {
+    for (const key of keys) {
+        const value = record[key];
+        if (typeof value === 'boolean')
+            return value;
+    }
+    return undefined;
+}
 function firstNumber(record, keys) {
     for (const key of keys) {
         const value = record[key];
