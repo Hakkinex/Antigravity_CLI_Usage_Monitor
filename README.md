@@ -9,7 +9,9 @@ The monitor is intentionally not an account scheduler. It does not switch accoun
 ## Table of Contents
 
 - [Security](#security)
+- [Upstream Data Provider](#upstream-data-provider)
 - [Background](#background)
+- [What This Project Adds](#what-this-project-adds)
 - [Features](#features)
 - [Install](#install)
 - [Usage](#usage)
@@ -33,11 +35,26 @@ It does not:
 
 Do not commit real account tokens, private keys, `.env` files, or raw quota output that contains private account data.
 
+## Upstream Data Provider
+
+This project builds on the quota data produced by [skainguyen1412/antigravity-usage](https://github.com/skainguyen1412/antigravity-usage). `antigravity-usage` handles the Antigravity quota lookup, including local IDE access, Google account access, multi-account quota reads, JSON output, caching, and provider-specific request details.
+
+`agy-monitor` does not reimplement account login, token handling, wakeup behavior, or Antigravity API access. It consumes the structured JSON returned by `antigravity-usage` and focuses on presenting that result as a readable monitoring dashboard.
+
 ## Background
 
 Antigravity CLI users often work with multiple accounts and need a quick way to see quota status without manually checking each account. `agy-monitor` focuses on one job: show all account quota states clearly in the terminal.
 
 Version 0.1 uses `antigravity-usage` as the data provider and renders a lightweight ANSI dashboard instead of a heavy TUI framework.
+
+## What This Project Adds
+
+- Bundles `antigravity-usage` as an npm dependency so a separate global provider install is not required.
+- Resolves the local `node_modules/.bin/antigravity-usage` binary first, with a `PATH` fallback for existing global installs.
+- Calls read-only quota commands and keeps account login, token management, and wakeup behavior outside the monitor.
+- Normalizes the provider JSON into account cards, quota groups, status colors, reset timers, and stable terminal output.
+- Adds mock fixture mode so the dashboard layout can be tested without real account data.
+- Adds `debug-dump` to inspect raw provider JSON and candidate quota fields when upstream output changes.
 
 ## Features
 
@@ -65,11 +82,7 @@ Gemini 3 Pro (High)    ● 100% 4h25m   ● 92% 3d4h
 
 This project uses npm. `package-lock.json` is the canonical lockfile.
 
-Install the data provider first:
-
-```bash
-npm install -g antigravity-usage
-```
+`antigravity-usage` is installed as a project dependency. No separate global install is required for the data provider.
 
 Install this project locally:
 
@@ -151,16 +164,16 @@ Do not commit `.agy-monitor-debug/`; it can contain account emails or raw quota 
 
 ## Data Source
 
-The default wrapper command is:
+The default wrapper command uses the locally installed provider binary when available:
 
 ```bash
-antigravity-usage quota --all --json --method google
+node_modules/.bin/antigravity-usage quota --all --json --method google
 ```
 
-If the installed provider does not support the `quota` subcommand form, `agy-monitor` falls back to:
+If the local dependency is unavailable, `agy-monitor` falls back to `antigravity-usage` from `PATH`. If the provider does not support the `quota` subcommand form, `agy-monitor` falls back to:
 
 ```bash
-antigravity-usage --all --json --method google
+node_modules/.bin/antigravity-usage --all --json --method google
 ```
 
 `--refresh` is passed only on startup when requested, or during manual refresh.

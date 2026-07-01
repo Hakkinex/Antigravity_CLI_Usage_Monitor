@@ -1,11 +1,13 @@
 import { execFile } from 'node:child_process';
+import { resolveAntigravityUsageCommand } from './antigravityUsageCommand.js';
 const TIMEOUT_MS = 30_000;
 const ALLOWED_METHODS = new Set(['google', 'local', 'auto']);
 export async function fetchAntigravityUsage(options) {
     const attempts = buildAttempts(options);
+    const binary = resolveAntigravityUsageCommand();
     for (const args of attempts) {
-        const command = `antigravity-usage ${args.join(' ')}`;
-        const result = await runAntigravityUsage(args);
+        const command = `${binary.displayName} ${args.join(' ')}`;
+        const result = await runAntigravityUsage(binary.executable, args);
         if (result.ok)
             return { ok: true, raw: result.raw, command };
         if (!isLikelySubcommandProblem(result.error.message)) {
@@ -29,9 +31,9 @@ function buildAttempts(options) {
         flags.push('--refresh');
     return [['quota', ...flags], flags];
 }
-function runAntigravityUsage(args) {
+function runAntigravityUsage(executable, args) {
     return new Promise((resolve) => {
-        execFile('antigravity-usage', args, { timeout: TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
+        execFile(executable, args, { timeout: TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
             if (error) {
                 resolve({
                     ok: false,

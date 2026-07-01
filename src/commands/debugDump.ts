@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import type { DebugDumpOptions } from '../types.js';
+import { resolveAntigravityUsageCommand } from '../providers/antigravityUsageCommand.js';
 
 const TIMEOUT_MS = 60_000;
 const ALLOWED_METHODS = new Set(['google', 'local', 'auto']);
@@ -94,10 +95,11 @@ function buildArgs(options: DebugDumpOptions): string[] {
 
 function runAntigravityUsageDebug(options: DebugDumpOptions): Promise<ExecResult> {
   const args = buildArgs(options);
-  const command = `antigravity-usage ${args.join(' ')}`;
+  const binary = resolveAntigravityUsageCommand();
+  const command = `${binary.displayName} ${args.join(' ')}`;
 
   return new Promise((resolveResult) => {
-    execFile('antigravity-usage', args, { timeout: TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
+    execFile(binary.executable, args, { timeout: TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
       resolveResult({
         exitCode: typeof error?.code === 'number' ? error.code : error ? null : 0,
         command,

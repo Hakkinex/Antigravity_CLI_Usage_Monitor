@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
+import { resolveAntigravityUsageCommand } from '../providers/antigravityUsageCommand.js';
 const TIMEOUT_MS = 60_000;
 const ALLOWED_METHODS = new Set(['google', 'local', 'auto']);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,9 +63,10 @@ function buildArgs(options) {
 }
 function runAntigravityUsageDebug(options) {
     const args = buildArgs(options);
-    const command = `antigravity-usage ${args.join(' ')}`;
+    const binary = resolveAntigravityUsageCommand();
+    const command = `${binary.displayName} ${args.join(' ')}`;
     return new Promise((resolveResult) => {
-        execFile('antigravity-usage', args, { timeout: TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
+        execFile(binary.executable, args, { timeout: TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
             resolveResult({
                 exitCode: typeof error?.code === 'number' ? error.code : error ? null : 0,
                 command,
