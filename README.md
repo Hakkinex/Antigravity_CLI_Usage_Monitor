@@ -67,6 +67,22 @@ No separate `antigravity-usage` install is required.
 
 ## Usage
 
+## Login Setup
+
+Google OAuth login works without extra setup. If you need to override the built-in credentials, set:
+
+```bash
+export ANTIGRAVITY_OAUTH_CLIENT_ID=your-client-id
+export ANTIGRAVITY_OAUTH_CLIENT_SECRET=your-client-secret
+```
+
+Then run:
+
+```bash
+agy-monitor login
+```
+
+
 Start the monitor:
 
 ```bash
@@ -130,12 +146,12 @@ Config is stored under `agy-monitor`. If a legacy `antigravity-usage` config exi
 
 ## Environment Variables
 
-Google OAuth token refresh/login flows require credentials to be supplied by environment variables. Do not hardcode or commit them.
+Google OAuth login works out of the box with built-in credentials. Use environment variables only if you need to override them.
 
 | Variable | Description |
 | --- | --- |
-| `ANTIGRAVITY_OAUTH_CLIENT_ID` | Google OAuth client id used by the internal provider. |
-| `ANTIGRAVITY_OAUTH_CLIENT_SECRET` | Google OAuth client secret used by the internal provider. |
+| `ANTIGRAVITY_OAUTH_CLIENT_ID` | Optional override for the built-in Google OAuth client id. |
+| `ANTIGRAVITY_OAUTH_CLIENT_SECRET` | Optional override for the built-in Google OAuth client secret. |
 
 ## Config
 

@@ -7,26 +7,13 @@ import { URL, URLSearchParams } from 'node:url'
 import open from 'open'
 import inquirer from 'inquirer'
 import { debug, info, error as logError } from '../core/logger.js'
-import { AuthenticationError } from '../core/errors.js'
 import { getAccountManager } from '../accounts/index.js'
 import type { OAuthTokenResponse, StoredTokens } from '../quota/types.js'
 
 // OAuth configuration
-function getRequiredOAuthEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new AuthenticationError(`Missing ${name}. Set this environment variable before starting a Google OAuth flow.`);
-  }
-  return value;
-}
-
 const OAUTH_CONFIG = {
-  get clientId() {
-    return getRequiredOAuthEnv('ANTIGRAVITY_OAUTH_CLIENT_ID');
-  },
-  get clientSecret() {
-    return getRequiredOAuthEnv('ANTIGRAVITY_OAUTH_CLIENT_SECRET');
-  },
+  clientId: process.env.ANTIGRAVITY_OAUTH_CLIENT_ID || '1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com',
+  clientSecret: process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET || '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',
   authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
   tokenUrl: 'https://oauth2.googleapis.com/token',
   scopes: [
