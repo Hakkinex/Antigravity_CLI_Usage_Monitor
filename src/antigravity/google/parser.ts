@@ -126,7 +126,8 @@ export function parseGoogleModels(raw: RawResponse, ctx: { email: string; now?: 
     method: 'google',
     timestamp: now,
     models,
-    quotaResetTime: earliestIso ?? null
+    quotaResetTime: earliestIso ?? null,
+    raw
   };
 }
 
@@ -164,6 +165,10 @@ export function parseQuotaSnapshot(
     method: 'google',
     email,
     planType: codeAssistResponse.planInfo?.planType,
-    promptCredits: parsePromptCredits(codeAssistResponse)
+    promptCredits: parsePromptCredits(codeAssistResponse),
+    raw: {
+      codeAssistResponse,
+      modelsResponse
+    }
   };
 }

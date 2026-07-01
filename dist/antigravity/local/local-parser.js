@@ -11,7 +11,8 @@ export function parseLocalQuotaSnapshot(userStatus) {
         timestamp: new Date().toISOString(),
         method: 'local',
         email: userStatus.email,
-        models: []
+        models: [],
+        raw: userStatus.raw
     };
     // Parse prompt credits
     if (userStatus.quota?.promptCredits) {

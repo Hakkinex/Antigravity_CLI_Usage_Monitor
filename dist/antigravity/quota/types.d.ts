@@ -40,6 +40,7 @@ export interface QuotaSnapshot {
     promptCredits?: PromptCreditsInfo;
     models: ModelQuotaInfo[];
     quotaResetTime?: string | null;
+    raw?: unknown;
 }
 export interface StoredTokens {
     accessToken: string;
