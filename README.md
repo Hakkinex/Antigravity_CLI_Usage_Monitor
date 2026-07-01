@@ -16,6 +16,8 @@ The monitor is intentionally not an account scheduler. It does not switch accoun
 - [Install](#install)
 - [Usage](#usage)
 - [Data Source](#data-source)
+- [Internalization Status](#internalization-status)
+- [Third-Party Notices](#third-party-notices)
 - [Config](#config)
 - [Contributing](#contributing)
 - [License](#license)
@@ -39,7 +41,9 @@ Do not commit real account tokens, private keys, `.env` files, or raw quota outp
 
 This project builds on the quota data produced by [skainguyen1412/antigravity-usage](https://github.com/skainguyen1412/antigravity-usage). `antigravity-usage` handles the Antigravity quota lookup, including local IDE access, Google account access, multi-account quota reads, JSON output, caching, and provider-specific request details.
 
-`agy-monitor` does not reimplement account login, token handling, wakeup behavior, or Antigravity API access. It consumes the structured JSON returned by `antigravity-usage` and focuses on presenting that result as a readable monitoring dashboard.
+`agy-monitor` currently does not reimplement account login, token handling, wakeup behavior, or Antigravity API access. It consumes the structured JSON returned by `antigravity-usage` and focuses on presenting that result as a readable monitoring dashboard.
+
+This repo has started internalizing the Antigravity parser/type boundary. Source attribution and license details are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Background
 
@@ -53,6 +57,7 @@ Version 0.1 uses `antigravity-usage` as the data provider and renders a lightwei
 - Resolves the local `node_modules/.bin/antigravity-usage` binary first, with a `PATH` fallback for existing global installs.
 - Calls read-only quota commands and keeps account login, token management, and wakeup behavior outside the monitor.
 - Normalizes the provider JSON into account cards, quota groups, status colors, reset timers, and stable terminal output.
+- Supports Google `quotaInfos[]` / `windows.weekly` parsing so the Week column can render when the data source provides a weekly window.
 - Adds mock fixture mode so the dashboard layout can be tested without real account data.
 - Adds `debug-dump` to inspect raw provider JSON and candidate quota fields when upstream output changes.
 
@@ -178,7 +183,26 @@ node_modules/.bin/antigravity-usage --all --json --method google
 
 `--refresh` is passed only on startup when requested, or during manual refresh.
 
-Weekly quota requires `antigravity-usage --json` to expose weekly fields such as `weeklyRemainingPercentage`, `weeklyResetTime`, or `weeklyTimeUntilResetMs`. See [docs/antigravity-usage-weekly-json.md](docs/antigravity-usage-weekly-json.md) for the clean upstream patch plan.
+The Week column can read `weeklyRemainingPercentage`, `weeklyResetTime`, `weeklyTimeUntilResetMs`, Google `quotaInfos[]`, or the internal parser output shape `windows.weekly`. Runtime fetching still uses the bundled `antigravity-usage` CLI; until the auth/token/fetch layer is fully internalized, the Week column will still show `no data` when that CLI JSON does not include a weekly window.
+
+## Internalization Status
+
+Completed:
+
+- `src/antigravity/quota/types.ts`: adds `QuotaWindow` and `windows.fiveHour` / `windows.weekly` types.
+- `src/antigravity/google/parser.ts`: parses Google `quotaInfos[]` and classifies five-hour vs weekly windows by `windowId` / `windowLabel`.
+- `src/parser/parseAntigravityUsageJson.ts`: lets the current monitor parser consume `quotaInfos[]` and `windows.weekly`.
+- `test/antigravity/google-parser.test.ts` and `test/parser.test.ts`: add weekly fixture coverage.
+
+Not completed yet:
+
+- Auth/token management and Google/local fetch are not fully internalized.
+- The runtime provider still calls the bundled `antigravity-usage` CLI.
+- `package.json` still keeps the `antigravity-usage` dependency until the fetch layer is internalized.
+
+## Third-Party Notices
+
+Parts of the parser/type design under `src/antigravity/` are derived from `skainguyen1412/antigravity-usage` and modified for `agy-monitor` weekly quota window normalization. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the upstream commit and MIT license text.
 
 ## Config
 

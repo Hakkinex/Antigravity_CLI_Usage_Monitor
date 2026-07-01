@@ -72,4 +72,45 @@ describe('parseAntigravityUsageJson', () => {
     expect(snapshot.accounts[0]?.models[1]?.weeklyResetInText).toBe('72h 0m');
     expect(snapshot.accounts[0]?.models[1]?.weeklyStatus).toBe('medium');
   });
+
+  it('normalizes quotaInfos weekly windows for the monitor UI', () => {
+    const snapshot = parseAntigravityUsageJson(
+      [
+        {
+          email: 'weekly@example.com',
+          status: 'success',
+          snapshot: {
+            email: 'weekly@example.com',
+            models: {
+              'gemini-3-flash': {
+                displayName: 'Gemini 3 Flash',
+                quotaInfos: [
+                  {
+                    windowId: 'fiveHour',
+                    windowLabel: 'Five Hour Limit',
+                    remainingFraction: 0.8135,
+                    resetTime: '2026-07-01T13:00:00Z'
+                  },
+                  {
+                    windowId: 'weekly',
+                    windowLabel: 'Weekly Limit',
+                    remainingFraction: 0.9685,
+                    resetTime: '2026-07-05T18:00:00Z'
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      defaultConfig,
+      'google'
+    );
+
+    const model = snapshot.accounts[0]?.models[0];
+    expect(model?.remainingPercent).toBe(81);
+    expect(model?.weeklyRemainingPercent).toBe(97);
+    expect(model?.resetInText).toBeTruthy();
+    expect(model?.weeklyResetInText).toBeTruthy();
+  });
 });

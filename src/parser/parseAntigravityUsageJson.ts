@@ -99,22 +99,38 @@ function extractModels(record: AnyRecord): unknown[] {
 
 function normalizeModel(raw: unknown, index: number, config: MonitorConfig): ModelQuota {
   const record = isRecord(raw) ? raw : {};
+  const fiveHourRecord = findQuotaWindow(record, 'fiveHour');
+  const weeklyWindowRecord = findQuotaWindow(record, 'weekly');
   const name = firstString(record, ['name', 'model', 'modelName', 'displayName', 'label', 'modelId']) ?? `Model ${index + 1}`;
-  const remainingPercent = firstNumber(record, [
-    'remainingPercent',
-    'remainingPercentage',
-    'remaining',
-    'percent',
-    'percentage',
-    'remaining_percentage',
-    'quotaRemainingPercent'
-  ]);
+  const remainingPercent =
+    firstNumber(record, [
+      'remainingPercent',
+      'remainingPercentage',
+      'remaining',
+      'percent',
+      'percentage',
+      'remaining_percentage',
+      'quotaRemainingPercent'
+    ]) ?? (fiveHourRecord ? firstNumber(fiveHourRecord, PERCENT_KEYS) : null);
   const resetInText =
     firstString(record, ['resetInText', 'resetsIn', 'resetIn', 'reset', 'resets_in']) ??
-    formatResetFromMilliseconds(firstRawNumber(record, ['timeUntilResetMs'])) ??
-    formatResetFromSeconds(firstRawNumber(record, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset']));
-  const resetAt = firstString(record, ['resetAt', 'resetTime', 'reset_at']);
-  const weeklyRecord = firstRecord(record, ['weekly', 'week', 'weeklyQuota', 'weeklyUsage', 'weekUsage']);
+    (fiveHourRecord ? firstString(fiveHourRecord, RESET_TEXT_KEYS) : undefined) ??
+    formatResetFromMilliseconds(
+      firstRawNumber(record, ['timeUntilResetMs']) ??
+        (fiveHourRecord ? firstRawNumber(fiveHourRecord, ['timeUntilResetMs', 'resetInMs']) : null)
+    ) ??
+    formatResetFromSeconds(
+      firstRawNumber(record, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset']) ??
+        (fiveHourRecord ? firstRawNumber(fiveHourRecord, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset']) : null)
+    ) ??
+    formatResetFromTimestamp(
+      firstString(record, ['resetAt', 'resetTime', 'reset_at']) ??
+        (fiveHourRecord ? firstString(fiveHourRecord, RESET_AT_KEYS) : undefined)
+    );
+  const resetAt =
+    firstString(record, ['resetAt', 'resetTime', 'reset_at']) ??
+    (fiveHourRecord ? firstString(fiveHourRecord, RESET_AT_KEYS) : undefined);
+  const weeklyRecord = firstRecord(record, ['weekly', 'week', 'weeklyQuota', 'weeklyUsage', 'weekUsage']) ?? weeklyWindowRecord;
   const weeklyRemainingPercent =
     firstNumber(record, [
       'weeklyRemainingPercent',
@@ -125,38 +141,25 @@ function normalizeModel(raw: unknown, index: number, config: MonitorConfig): Mod
       'weekRemaining',
       'weekly_percentage',
       'weeklyPercent'
-    ]) ??
-    (weeklyRecord
-      ? firstNumber(weeklyRecord, [
-          'remainingPercent',
-          'remainingPercentage',
-          'remaining',
-          'percent',
-          'percentage',
-          'remaining_percentage',
-          'quotaRemainingPercent'
-        ])
-      : null);
+    ]) ?? (weeklyRecord ? firstNumber(weeklyRecord, PERCENT_KEYS) : null);
   const weeklyResetInText =
     firstString(record, ['weeklyResetInText', 'weeklyResetsIn', 'weeklyResetIn', 'weekResetIn', 'weekResetsIn']) ??
-    (weeklyRecord
-      ? firstString(weeklyRecord, ['resetInText', 'resetsIn', 'resetIn', 'reset', 'resets_in'])
-      : undefined) ??
+    (weeklyRecord ? firstString(weeklyRecord, RESET_TEXT_KEYS) : undefined) ??
     formatResetFromMilliseconds(
       firstRawNumber(record, ['weeklyTimeUntilResetMs', 'weekTimeUntilResetMs', 'weeklyResetInMs']) ??
         (weeklyRecord ? firstRawNumber(weeklyRecord, ['timeUntilResetMs', 'resetInMs']) : null)
     ) ??
     formatResetFromSeconds(
       firstRawNumber(record, ['weeklyResetInSeconds', 'weekResetInSeconds', 'weeklyResetSeconds']) ??
-        (weeklyRecord
-          ? firstRawNumber(weeklyRecord, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset'])
-          : null)
+        (weeklyRecord ? firstRawNumber(weeklyRecord, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset']) : null)
     ) ??
-    formatResetFromTimestamp(firstString(record, ['weeklyResetTime', 'weeklyResetAt', 'weekResetTime', 'weekResetAt']) ??
-      (weeklyRecord ? firstString(weeklyRecord, ['resetAt', 'resetTime', 'reset_at']) : undefined));
+    formatResetFromTimestamp(
+      firstString(record, ['weeklyResetTime', 'weeklyResetAt', 'weekResetTime', 'weekResetAt']) ??
+        (weeklyRecord ? firstString(weeklyRecord, RESET_AT_KEYS) : undefined)
+    );
   const weeklyResetAt =
     firstString(record, ['weeklyResetAt', 'weekResetAt', 'weeklyResetTime']) ??
-    (weeklyRecord ? firstString(weeklyRecord, ['resetAt', 'resetTime', 'reset_at']) : undefined);
+    (weeklyRecord ? firstString(weeklyRecord, RESET_AT_KEYS) : undefined);
   const group = getModelGroup(name);
 
   return {
@@ -174,6 +177,63 @@ function normalizeModel(raw: unknown, index: number, config: MonitorConfig): Mod
   };
 }
 
+const PERCENT_KEYS = [
+  'remainingPercent',
+  'remainingPercentage',
+  'remaining',
+  'percent',
+  'percentage',
+  'remaining_percentage',
+  'quotaRemainingPercent',
+  'remainingFraction'
+];
+
+const RESET_TEXT_KEYS = ['resetInText', 'resetsIn', 'resetIn', 'reset', 'resets_in'];
+const RESET_AT_KEYS = ['resetAt', 'resetTime', 'reset_at'];
+
+function findQuotaWindow(record: AnyRecord, target: 'fiveHour' | 'weekly'): AnyRecord | undefined {
+  const windows = firstRecord(record, ['windows']);
+  if (windows) {
+    for (const [key, value] of Object.entries(windows)) {
+      if (isRecord(value) && classifyWindowKey(key, value) === target) return value;
+    }
+  }
+
+  const quotaInfos = record.quotaInfos;
+  if (Array.isArray(quotaInfos)) {
+    for (const quotaInfo of quotaInfos) {
+      if (isRecord(quotaInfo) && classifyWindowKey('', quotaInfo) === target) return quotaInfo;
+    }
+  }
+
+  const quotaInfo = firstRecord(record, ['quotaInfo']);
+  if (quotaInfo && target === 'fiveHour') return quotaInfo;
+  return undefined;
+}
+
+function classifyWindowKey(key: string, record: AnyRecord): 'fiveHour' | 'weekly' | 'unknown' {
+  const combined = [
+    key,
+    firstString(record, ['id', 'windowId', 'window_id']),
+    firstString(record, ['label', 'windowLabel', 'window_label'])
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (combined.includes('week')) return 'weekly';
+  if (
+    combined.includes('five') ||
+    combined.includes('5h') ||
+    combined.includes('5 hour') ||
+    combined.includes('5-hour') ||
+    combined.includes('fivehour')
+  ) {
+    return 'fiveHour';
+  }
+
+  return 'unknown';
+}
 function looksLikeAccount(raw: AnyRecord): boolean {
   return Boolean(raw.email || raw.models || raw.quotas || raw.quota || (isRecord(raw.snapshot) && (raw.snapshot.email || raw.snapshot.models || raw.snapshot.quotas || raw.snapshot.quota)));
 }

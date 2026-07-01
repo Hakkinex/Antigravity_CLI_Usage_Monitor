@@ -16,6 +16,8 @@
 - [安裝](#安裝)
 - [使用方式](#使用方式)
 - [資料來源](#資料來源)
+- [內化狀態](#內化狀態)
+- [第三方授權註記](#第三方授權註記)
 - [設定](#設定)
 - [貢獻](#貢獻)
 - [授權](#授權)
@@ -39,7 +41,9 @@
 
 本專案建立在 [skainguyen1412/antigravity-usage](https://github.com/skainguyen1412/antigravity-usage) 產出的 quota 資料之上。`antigravity-usage` 負責 Antigravity quota 查詢，包含本機 IDE 存取、Google 帳號存取、多帳號 quota 讀取、JSON 輸出、cache，以及 provider 相關的請求細節。
 
-`agy-monitor` 不重新實作帳號登入、token 處理、wakeup 行為或 Antigravity API 存取。它會使用 `antigravity-usage` 回傳的結構化 JSON，並專注在把結果整理成容易閱讀的監控 dashboard。
+`agy-monitor` 目前不重新實作帳號登入、token 處理、wakeup 行為或 Antigravity API 存取。它會使用 `antigravity-usage` 回傳的結構化 JSON，並專注在把結果整理成容易閱讀的監控 dashboard。
+
+本 repo 已開始內化 Antigravity 資料層的 parser/type 邊界，來源與授權記錄在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 背景
 
@@ -53,6 +57,7 @@ v0.1 使用 `antigravity-usage` 作為資料來源，並用輕量 ANSI dashboard
 - 優先解析本地 `node_modules/.bin/antigravity-usage` binary，並保留 `PATH` fallback 支援既有全域安裝。
 - 只呼叫 read-only quota 指令，帳號登入、token 管理與 wakeup 行為仍由 monitor 之外的工具負責。
 - 將 provider JSON 正規化成帳號卡片、quota 群組、狀態顏色、reset timer 與穩定的終端機輸出。
+- 支援解析 Google `quotaInfos[]` / `windows.weekly` schema，當資料來源提供 weekly window 時可顯示 Week 欄位。
 - 提供 mock fixture 模式，可以不使用真實帳號資料就測試 dashboard layout。
 - 提供 `debug-dump`，用來檢查原始 provider JSON 與可能的 quota 欄位，方便追蹤 upstream 輸出變化。
 
@@ -178,7 +183,26 @@ node_modules/.bin/antigravity-usage --all --json --method google
 
 `--refresh` 只會在使用者要求啟動強制刷新，或手動刷新時傳入。
 
-週 quota 需要 `antigravity-usage --json` 輸出 `weeklyRemainingPercentage`、`weeklyResetTime` 或 `weeklyTimeUntilResetMs` 等欄位。乾淨的 upstream 修改方向請看 [docs/antigravity-usage-weekly-json.md](docs/antigravity-usage-weekly-json.md)。
+Week 欄位可讀取 `weeklyRemainingPercentage`、`weeklyResetTime`、`weeklyTimeUntilResetMs`、Google `quotaInfos[]`，或內化 parser 產出的 `windows.weekly`。目前真實資料 fetch 仍透過 bundled `antigravity-usage` CLI；完整 auth/token/fetch 內化完成前，若該 CLI 的 JSON 沒有 weekly window，Week 欄仍會顯示 `no data`。
+
+## 內化狀態
+
+已完成：
+
+- `src/antigravity/quota/types.ts`：新增 `QuotaWindow` 與 `windows.fiveHour` / `windows.weekly` 型別。
+- `src/antigravity/google/parser.ts`：解析 Google `quotaInfos[]`，用 `windowId` / `windowLabel` 分類 five-hour 與 weekly window。
+- `src/parser/parseAntigravityUsageJson.ts`：現有 monitor parser 可消費 `quotaInfos[]` 與 `windows.weekly`。
+- `test/antigravity/google-parser.test.ts` 與 `test/parser.test.ts`：補上 weekly fixture 測試。
+
+尚未完成：
+
+- auth/token 管理與 Google/local fetch 仍未完整內化。
+- runtime provider 目前仍呼叫 bundled `antigravity-usage` CLI。
+- `package.json` 仍保留 `antigravity-usage` dependency，直到 fetch layer 內化完成。
+
+## 第三方授權註記
+
+`src/antigravity/` 的部分 parser/type 設計衍生自 `skainguyen1412/antigravity-usage`，並已針對 `agy-monitor` 加入 weekly quota window normalization。來源 commit 與 MIT license 內容請見 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 設定
 
