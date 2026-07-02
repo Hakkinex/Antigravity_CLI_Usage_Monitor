@@ -4,6 +4,8 @@
 
 一個只讀的終端機 dashboard，用來同時監控多個 Antigravity CLI 帳號的 quota 狀態。`agy-monitor` 現在使用內建 Antigravity 資料 provider，該資料層衍生自 `skainguyen1412/antigravity-usage`，安裝 monitor 後就能查詢與呈現 quota。
 
+從 `v1.1.0` 開始，`agy-monitor` 會依照上游實際提供的 quota window 顯示單一、誠實的 `Quota` 視圖，直接呈現真實剩餘用量與 reset time，並隔離 `google` / `local` 快取路徑避免互相污染，同時補強除錯與回歸測試覆蓋。
+
 這個工具只做監控，不做帳號調度。它不會在某個帳號滿額後自動切換帳號，不會執行 wakeup，也不會觸發任何模型請求。
 
 ## 安全性
@@ -35,11 +37,10 @@
 
 ## 功能
 
-- 2 欄終端機卡片 dashboard。
+- 每個 model group 顯示單一 `Quota` 欄位的終端機卡片 dashboard。
 - 多帳號 quota 監控。
 - 預設顯示完整 email，可選擇遮罩。
-- 同一列顯示五小時 quota 與週 quota。
-- 顯示剩餘百分比、reset time 與彩色狀態點。
+- 顯示剩餘百分比、真實 reset time 與彩色狀態點。
 - 自動刷新，按 `r` 手動刷新。
 - 類似 `docker stats` 的穩定重繪。
 - mock fixture 模式，方便本機測試畫面。
@@ -49,8 +50,8 @@
 畫面列範例：
 
 ```text
-Model                  5h             Week
-Gemini 3 Pro (High)    * 100% 4h25m   * 92% 3d4h
+Model                  Quota
+Gemini Flash/Pro       * 92% 3d4h
 ```
 
 ## 安裝
