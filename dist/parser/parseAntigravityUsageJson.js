@@ -151,7 +151,7 @@ function collectQuotaCandidates(record) {
 }
 function readQuotaCandidate(record) {
     return {
-        remainingPercent: firstNumber(record, PERCENT_KEYS),
+        remainingPercent: readPercent(record),
         resetInText: firstString(record, RESET_TEXT_KEYS) ??
             formatResetFromMilliseconds(firstRawNumber(record, ['timeUntilResetMs', 'resetInMs'])) ??
             formatResetFromSeconds(firstRawNumber(record, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset'])) ??
@@ -161,7 +161,7 @@ function readQuotaCandidate(record) {
 }
 function readLegacyWeeklyCandidate(record) {
     return {
-        remainingPercent: firstNumber(record, [
+        remainingPercent: readPercent(record, [
             'weeklyRemainingPercent',
             'weeklyRemainingPercentage',
             'weekRemainingPercent',
@@ -177,6 +177,13 @@ function readLegacyWeeklyCandidate(record) {
             formatResetFromTimestamp(firstString(record, ['weeklyResetTime', 'weeklyResetAt', 'weekResetTime', 'weekResetAt'])),
         resetAt: firstString(record, ['weeklyResetAt', 'weekResetAt', 'weeklyResetTime']) ?? null
     };
+}
+function readPercent(record, keys = PERCENT_KEYS) {
+    const percent = firstNumber(record, keys);
+    if (percent !== null)
+        return percent;
+    const isExhausted = firstBoolean(record, ['isExhausted', 'exhausted']);
+    return isExhausted ? 0 : null;
 }
 function dedupeCandidates(candidates) {
     const seen = new Set();

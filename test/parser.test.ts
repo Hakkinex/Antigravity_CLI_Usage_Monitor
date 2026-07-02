@@ -107,4 +107,33 @@ describe('parseAntigravityUsageJson', () => {
     expect(model?.resetInText).toBeTruthy();
     expect(model?.resetAt).toBe('2026-07-01T13:00:00Z');
   });
+
+  it('keeps exhausted quota rows visible when only isExhausted and resetTime are present', () => {
+    const snapshot = parseAntigravityUsageJson(
+      [
+        {
+          email: 'exhausted@example.com',
+          status: 'success',
+          snapshot: {
+            email: 'exhausted@example.com',
+            models: [
+              {
+                displayName: 'Gemini 3 Flash',
+                isExhausted: true,
+                resetTime: '2026-07-01T13:00:00Z',
+                timeUntilResetMs: 3600000
+              }
+            ]
+          }
+        }
+      ],
+      defaultConfig,
+      'google'
+    );
+
+    const model = snapshot.accounts[0]?.models[0];
+    expect(model?.remainingPercent).toBe(0);
+    expect(model?.status).toBe('exhausted');
+    expect(model?.resetInText).toBe('1h 0m');
+  });
 });

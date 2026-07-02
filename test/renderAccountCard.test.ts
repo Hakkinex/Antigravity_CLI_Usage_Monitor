@@ -28,6 +28,20 @@ describe('renderAccountCard', () => {
     expect(output).toContain('Quota');
     expect(output).not.toContain('Gemini 3 Flash');
   });
+
+  it('keeps exhausted rows visible and shows reset time', () => {
+    const account: AccountQuota = {
+      id: 'user@example.com',
+      displayName: 'user@example.com',
+      status: 'ok',
+      models: [model('Gemini 3 Flash', 'gemini', 0, '36m')]
+    };
+
+    const output = stripAnsi(renderAccountCard(account).join('\n'));
+
+    expect(output).toContain('Gemini Flash/Pro');
+    expect(output).toContain('0% 36m');
+  });
 });
 
 function model(
