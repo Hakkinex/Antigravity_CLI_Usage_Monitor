@@ -19,6 +19,7 @@ import {
   PortDetectionError,
   NoAuthMethodAvailableError
 } from '../core/errors.js'
+import type { QuotaSnapshot } from '../quota/types.js'
 
 interface QuotaOptions {
   json?: boolean
@@ -27,6 +28,12 @@ interface QuotaOptions {
   account?: string
   refresh?: boolean
   allModels?: boolean
+}
+
+function expectedSourceForMethod(method: QuotaMethod): QuotaSnapshot['source'] | undefined {
+  if (method === 'google') return 'google'
+  if (method === 'local') return 'local'
+  return undefined
 }
 
 /**
@@ -121,7 +128,7 @@ async function fetchAllAccountsQuota(options: QuotaOptions): Promise<void> {
 
     try {
       // Check cache first (unless refresh requested)
-      if (!options.refresh && isCacheValid(email)) {
+      if (!options.refresh && isCacheValid(email, { method: options.method || 'auto', source: expectedSourceForMethod(options.method || 'auto') })) {
         const cached = loadCache(email)
         if (cached) {
           debug('quota', `Using cached data for ${email}`)

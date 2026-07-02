@@ -8,6 +8,13 @@ import { getAccountManager, saveCache, isCacheValid, loadCache, getCacheAge } fr
 import { renderAllQuotaTable } from '../render/index.js';
 import { error as logError, debug, info } from '../core/logger.js';
 import { NotLoggedInError, AuthenticationError, NetworkError, RateLimitError, APIError, AntigravityNotRunningError, LocalConnectionError, PortDetectionError, NoAuthMethodAvailableError } from '../core/errors.js';
+function expectedSourceForMethod(method) {
+    if (method === 'google')
+        return 'google';
+    if (method === 'local')
+        return 'local';
+    return undefined;
+}
 /**
  * Fetch quota for a single account
  */
@@ -88,7 +95,7 @@ async function fetchAllAccountsQuota(options) {
         const isActive = email === activeEmail;
         try {
             // Check cache first (unless refresh requested)
-            if (!options.refresh && isCacheValid(email)) {
+            if (!options.refresh && isCacheValid(email, { method: options.method || 'auto', source: expectedSourceForMethod(options.method || 'auto') })) {
                 const cached = loadCache(email);
                 if (cached) {
                     debug('quota', `Using cached data for ${email}`);

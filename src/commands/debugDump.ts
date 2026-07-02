@@ -19,6 +19,8 @@ type Analysis = {
   command: string;
   exitCode: number | null;
   usedCache: boolean;
+  methodsSeen: string[];
+  sourcesSeen: string[];
   stdoutJsonParseable: boolean;
   stdoutJsonPaths: string[];
   stderrJsonBlocks: Array<{
@@ -76,7 +78,7 @@ function parseDebugDumpOptions(argv: string[]): DebugDumpOptions {
     method,
     all: !has('--no-all'),
     account,
-    refresh: !has('--use-cache'),
+    refresh: !has('--use-cache') && !has('--no-cache'),
     allModels: has('--all-models'),
     outputDir: resolveOutputDir(readValue('--output') ?? '.agy-monitor-debug')
   };
@@ -151,6 +153,8 @@ function analyzeDebugOutput(result: ExecResult): Analysis {
   const stdoutParsed = parseJson(result.stdout);
   const stdoutJsonPaths = stdoutParsed.ok ? collectPaths(stdoutParsed.value) : [];
   const usedCache = /Using cached data|Cache .* is valid/i.test(result.stderr) || hasCachedStatus(stdoutParsed);
+  const methodsSeen = stdoutParsed.ok ? collectDistinctValues(stdoutParsed.value, 'method') : [];
+  const sourcesSeen = stdoutParsed.ok ? collectDistinctValues(stdoutParsed.value, 'source') : [];
   const stderrJsonBlocks = extractDebugJsonBlocks(result.stderr).map((block) => {
     const parsed = parseJson(block.json);
     return {
@@ -167,6 +171,8 @@ function analyzeDebugOutput(result: ExecResult): Analysis {
     command: result.command,
     exitCode: result.exitCode,
     usedCache,
+    methodsSeen,
+    sourcesSeen,
     stdoutJsonParseable: stdoutParsed.ok,
     stdoutJsonPaths,
     stderrJsonBlocks,
@@ -175,11 +181,33 @@ function analyzeDebugOutput(result: ExecResult): Analysis {
       usedCache
         ? 'This dump used cached quota data. Re-run debug-dump without --use-cache to force a fresh upstream request.'
         : 'This dump appears to use fresh quota data rather than cached quota snapshots.',
-      'Look for weekly, week, quota, limit, reset, remaining, rolling, period, or window fields in candidatePaths.',
-      'If weekly quota is present in raw API blocks but absent from normalized JSON, patch the internal parser/types.',
-      'If weekly quota is absent from fetchAvailableModels, inspect Antigravity local Connect API or native CLI network calls.'
+      'Verify methodsSeen and sourcesSeen to confirm the dump came from the expected provider path.',
+      'Look for quota, limit, reset, remaining, period, or window fields in candidatePaths.',
+      'If only one window exists upstream, render its real reset time directly instead of implying separate 5h/weekly limits.'
     ]
   };
+}
+
+function collectDistinctValues(value: unknown, key: string): string[] {
+  const values = new Set<string>();
+  collectValuesRecursive(value, key, values, 0);
+  return [...values].sort();
+}
+
+function collectValuesRecursive(value: unknown, key: string, values: Set<string>, depth: number): void {
+  if (depth > 8 || value === null || value === undefined) return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectValuesRecursive(item, key, values, depth + 1);
+    return;
+  }
+  if (typeof value !== 'object') return;
+
+  for (const [childKey, childValue] of Object.entries(value)) {
+    if (childKey === key && typeof childValue === 'string' && childValue) {
+      values.add(childValue);
+    }
+    collectValuesRecursive(childValue, key, values, depth + 1);
+  }
 }
 
 function hasCachedStatus(parsed: { ok: true; value: unknown } | { ok: false }): boolean {

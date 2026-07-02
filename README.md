@@ -142,6 +142,14 @@ The monitor parser accepts both the internal provider shape and compatible histo
 - `windows.weekly`
 - `weeklyRemainingPercentage`, `weeklyResetTime`, and `weeklyTimeUntilResetMs`
 
+The monitor UI now renders a single `Quota` column per model group. When upstream only exposes one real quota window, `agy-monitor` shows that window's actual remaining percentage and reset time directly instead of implying separate `5h` and `Week` limits.
+
+Debugging tips:
+
+- `agy-monitor debug-dump --method google --no-cache`
+- Check `analysis-*.json` for `usedCache`, `methodsSeen`, and `sourcesSeen`
+- Cache reuse is provider-aware, so `google` cache will not be reused for `local`, and vice versa
+
 Config is stored under `agy-monitor`. If a legacy `antigravity-usage` config exists and `agy-monitor` config does not, the provider imports it once for compatibility.
 
 ## Environment Variables

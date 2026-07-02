@@ -46,6 +46,8 @@ export interface AccountMetadata {
 export interface CachedQuota {
   cachedAt: string  // ISO date string
   ttl: number       // seconds
+  method: QuotaSnapshot['method']
+  source?: QuotaSnapshot['source']
   data: QuotaSnapshot | null
 }
 

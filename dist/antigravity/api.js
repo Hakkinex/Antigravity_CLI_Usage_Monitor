@@ -1,6 +1,13 @@
 import { getAccountManager, saveCache, isCacheValid, loadCache, getCacheAge } from './accounts/index.js';
 import { fetchQuota } from './quota/service.js';
 import { resetTokenManager } from './google/token-manager.js';
+function expectedSourceForMethod(method) {
+    if (method === 'google')
+        return 'google';
+    if (method === 'local')
+        return 'local';
+    return undefined;
+}
 export async function fetchQuotaSnapshot(options = {}) {
     const manager = getAccountManager();
     const originalActiveEmail = manager.getActiveEmail();
@@ -41,7 +48,7 @@ export async function fetchAllQuotaSnapshots(options = {}) {
     for (const email of emails) {
         const isActive = email === activeEmail;
         try {
-            if (!options.refresh && isCacheValid(email)) {
+            if (!options.refresh && isCacheValid(email, { method, source: expectedSourceForMethod(method) })) {
                 const cached = loadCache(email);
                 if (cached) {
                     results.push({ email, isActive, status: 'cached', snapshot: cached, cacheAge: getCacheAge(email) ?? 0 });
@@ -90,7 +97,7 @@ async function fetchLocalQuotaSnapshots(options, activeEmail) {
     }
     catch (error) {
         const email = requestedEmail ?? activeEmail ?? 'local';
-        const cached = loadCache(email);
+        const cached = isCacheValid(email, { method: 'local', source: 'local' }) ? loadCache(email) : null;
         if (cached) {
             return [{ email, isActive: email === activeEmail, status: 'cached', snapshot: cached, cacheAge: getCacheAge(email) ?? 0 }];
         }

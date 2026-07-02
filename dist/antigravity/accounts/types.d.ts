@@ -34,6 +34,8 @@ export interface AccountMetadata {
 export interface CachedQuota {
     cachedAt: string;
     ttl: number;
+    method: QuotaSnapshot['method'];
+    source?: QuotaSnapshot['source'];
     data: QuotaSnapshot | null;
 }
 /**

@@ -13,9 +13,9 @@ describe('renderAccountCard', () => {
       models: [
         model('Gemini 3 Flash', 'gemini', 99, '4h 4m'),
         model('Gemini 3.1 Pro (High)', 'gemini', 97, '4h 4m'),
-        model('Claude Opus 4.6 (Thinking)', 'claude', 100, '4h 59m', 91, '130h 1m'),
-        model('Claude Sonnet 4.6 (Thinking)', 'claude', 100, '4h 59m', 93, '130h 1m'),
-        model('GPT-OSS 120B (Medium)', 'gpt', 100, '4h 59m', 92, '130h 1m')
+        model('Claude Opus 4.6 (Thinking)', 'claude', 91, '130h 1m'),
+        model('Claude Sonnet 4.6 (Thinking)', 'claude', 93, '130h 1m'),
+        model('GPT-OSS 120B (Medium)', 'gpt', 92, '130h 1m')
       ]
     };
 
@@ -25,7 +25,7 @@ describe('renderAccountCard', () => {
     expect(output).toContain('Claude Opus/Sonnet/GPT');
     expect(output).toContain('97% 4h4m');
     expect(output).toContain('91% 130h1m');
-    expect(output).toContain('no data');
+    expect(output).toContain('Quota');
     expect(output).not.toContain('Gemini 3 Flash');
   });
 });
@@ -34,9 +34,7 @@ function model(
   name: string,
   group: ModelQuota['group'],
   remainingPercent: number,
-  resetInText: string,
-  weeklyRemainingPercent: number | null = null,
-  weeklyResetInText: string | null = null
+  resetInText: string
 ): ModelQuota {
   return {
     id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -44,9 +42,6 @@ function model(
     group,
     remainingPercent,
     resetInText,
-    status: remainingPercent > 80 ? 'healthy' : 'medium',
-    weeklyRemainingPercent,
-    weeklyResetInText,
-    weeklyStatus: weeklyRemainingPercent === null ? 'unknown' : weeklyRemainingPercent > 80 ? 'healthy' : 'medium'
+    status: remainingPercent > 80 ? 'healthy' : 'medium'
   };
 }
