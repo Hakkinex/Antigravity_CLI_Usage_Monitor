@@ -4,6 +4,8 @@
 
 A read-only terminal dashboard for monitoring Antigravity CLI quota across multiple accounts. `agy-monitor` now uses an internal Antigravity data provider derived from `skainguyen1412/antigravity-usage`, so installing the monitor is enough for quota fetching and rendering.
 
+As of `v1.1.0`, `agy-monitor` renders a single truthful `Quota` view based on the real upstream window, shows actual remaining usage plus reset time, isolates `google` and `local` cache paths to avoid contamination, and includes stronger debugging and regression coverage.
+
 The monitor is not an account scheduler. It does not switch accounts for workload routing, run wakeup commands, or trigger model requests.
 
 ## Security
@@ -35,11 +37,10 @@ Source attribution and MIT license text are tracked in [THIRD_PARTY_NOTICES.md](
 
 ## Features
 
-- Two-column terminal card dashboard.
+- Terminal card dashboard with a single truthful `Quota` column per model group.
 - Multi-account quota monitoring.
 - Full account email shown by default, with optional masking.
-- Five-hour and weekly quota on the same row.
-- Remaining percentage, reset time, and color status dot.
+- Remaining percentage, real reset time, and color status dot.
 - Automatic refresh and manual refresh with `r`.
 - Stable repaint behavior similar to `docker stats`.
 - Mock fixture mode for local UI testing.
@@ -49,8 +50,8 @@ Source attribution and MIT license text are tracked in [THIRD_PARTY_NOTICES.md](
 Example row:
 
 ```text
-Model                  5h             Week
-Gemini 3 Pro (High)    * 100% 4h25m   * 92% 3d4h
+Model                  Quota
+Gemini Flash/Pro       * 92% 3d4h
 ```
 
 ## Install
