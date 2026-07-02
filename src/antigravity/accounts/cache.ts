@@ -5,13 +5,18 @@
 import { loadAccountCache, saveAccountCache, deleteAccountCache } from './storage.js'
 import { getCacheTTL } from './config.js'
 import { debug } from '../core/logger.js'
-import type { QuotaSnapshot } from '../quota/types.js'
+import type { QuotaMethod, QuotaSnapshot } from '../quota/types.js'
 import type { CachedQuota } from './types.js'
 
 /**
  * Check if cache is valid for an account
  */
-export function isCacheValid(email: string): boolean {
+type CacheExpectation = {
+  method?: QuotaMethod
+  source?: QuotaSnapshot['source']
+}
+
+export function isCacheValid(email: string, expectation: CacheExpectation = {}): boolean {
   const cache = loadAccountCache(email)
   
   if (!cache || !cache.data) {
@@ -19,8 +24,8 @@ export function isCacheValid(email: string): boolean {
     return false
   }
 
-  if (!supportsWeeklyAwareSchema(cache.data)) {
-    debug('cache', `Cache for ${email} is missing weekly-aware schema, ignoring`)
+  if (!matchesExpectation(cache, expectation)) {
+    debug('cache', `Cache for ${email} does not match requested provider, ignoring`)
     return false
   }
   
@@ -34,13 +39,18 @@ export function isCacheValid(email: string): boolean {
   return isValid
 }
 
-function supportsWeeklyAwareSchema(data: QuotaSnapshot): boolean {
-  if (data.schemaVersion === 2) return true
+function matchesExpectation(cache: CachedQuota, expectation: CacheExpectation): boolean {
+  if (!cache.data) return false
 
-  return data.models.some((model) => {
-    const legacyWeekly = (model as typeof model & { weeklyRemainingPercentage?: unknown }).weeklyRemainingPercentage
-    return Boolean(model.windows?.weekly || legacyWeekly !== undefined)
-  })
+  if (expectation.method && expectation.method !== 'auto' && cache.method !== expectation.method) {
+    return false
+  }
+
+  if (expectation.source && cache.source !== expectation.source) {
+    return false
+  }
+
+  return true
 }
 
 /**
@@ -66,6 +76,8 @@ export function saveCache(email: string, data: QuotaSnapshot): void {
   const cache: CachedQuota = {
     cachedAt: new Date().toISOString(),
     ttl,
+    method: data.method,
+    source: data.source,
     data
   }
   

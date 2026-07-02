@@ -85,4 +85,21 @@ describe('fetchAllQuotaSnapshots', () => {
       }
     ]);
   });
+
+  it('passes provider expectations into cache validation for google requests', async () => {
+    mocks.isCacheValid.mockReturnValue(true);
+    mocks.loadCache.mockReturnValue({ email: 'active@example.com', method: 'google', source: 'google', timestamp: 'x', models: [] });
+    mocks.getCacheAge.mockReturnValue(12);
+
+    const results = await fetchAllQuotaSnapshots({ method: 'google', refresh: false });
+
+    expect(mocks.isCacheValid).toHaveBeenCalledWith('active@example.com', { method: 'google', source: 'google' });
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        email: 'active@example.com',
+        status: 'cached',
+        cacheAge: 12
+      })
+    );
+  });
 });

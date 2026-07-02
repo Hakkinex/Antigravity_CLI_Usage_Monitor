@@ -1,12 +1,16 @@
 /**
  * Cache management for quota data
  */
-import type { QuotaSnapshot } from '../quota/types.js';
+import type { QuotaMethod, QuotaSnapshot } from '../quota/types.js';
 import type { CachedQuota } from './types.js';
 /**
  * Check if cache is valid for an account
  */
-export declare function isCacheValid(email: string): boolean;
+type CacheExpectation = {
+    method?: QuotaMethod;
+    source?: QuotaSnapshot['source'];
+};
+export declare function isCacheValid(email: string, expectation?: CacheExpectation): boolean;
 /**
  * Get cache age in seconds
  */
@@ -27,3 +31,4 @@ export declare function loadCacheWithMeta(email: string): CachedQuota | null;
  * Invalidate cache for an account
  */
 export declare function invalidateCache(email: string): void;
+export {};

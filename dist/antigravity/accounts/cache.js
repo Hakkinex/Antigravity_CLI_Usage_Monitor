@@ -4,17 +4,14 @@
 import { loadAccountCache, saveAccountCache, deleteAccountCache } from './storage.js';
 import { getCacheTTL } from './config.js';
 import { debug } from '../core/logger.js';
-/**
- * Check if cache is valid for an account
- */
-export function isCacheValid(email) {
+export function isCacheValid(email, expectation = {}) {
     const cache = loadAccountCache(email);
     if (!cache || !cache.data) {
         debug('cache', `No valid cache for ${email}`);
         return false;
     }
-    if (!supportsWeeklyAwareSchema(cache.data)) {
-        debug('cache', `Cache for ${email} is missing weekly-aware schema, ignoring`);
+    if (!matchesExpectation(cache, expectation)) {
+        debug('cache', `Cache for ${email} does not match requested provider, ignoring`);
         return false;
     }
     const cachedAt = new Date(cache.cachedAt).getTime();
@@ -24,13 +21,16 @@ export function isCacheValid(email) {
     debug('cache', `Cache for ${email} is ${isValid ? 'valid' : 'stale'}`);
     return isValid;
 }
-function supportsWeeklyAwareSchema(data) {
-    if (data.schemaVersion === 2)
-        return true;
-    return data.models.some((model) => {
-        const legacyWeekly = model.weeklyRemainingPercentage;
-        return Boolean(model.windows?.weekly || legacyWeekly !== undefined);
-    });
+function matchesExpectation(cache, expectation) {
+    if (!cache.data)
+        return false;
+    if (expectation.method && expectation.method !== 'auto' && cache.method !== expectation.method) {
+        return false;
+    }
+    if (expectation.source && cache.source !== expectation.source) {
+        return false;
+    }
+    return true;
 }
 /**
  * Get cache age in seconds
@@ -51,6 +51,8 @@ export function saveCache(email, data) {
     const cache = {
         cachedAt: new Date().toISOString(),
         ttl,
+        method: data.method,
+        source: data.source,
         data
     };
     saveAccountCache(email, cache);

@@ -2,8 +2,7 @@ import type { ModelQuota, ModelStatus } from '../types.js';
 
 export type RenderQuotaGroup = {
   label: string;
-  fiveHour: QuotaSummary;
-  week: QuotaSummary;
+  quota: QuotaSummary;
 };
 
 export type QuotaSummary = {
@@ -35,17 +34,16 @@ const GROUPS: GroupDefinition[] = [
 export function buildQuotaGroups(models: ModelQuota[]): RenderQuotaGroup[] {
   return GROUPS.map((group) => ({
     label: group.label,
-    fiveHour: summarizeQuota(models.filter(group.matches), 'five-hour'),
-    week: summarizeQuota(models.filter(group.matches), 'week')
-  })).filter((group) => group.fiveHour.remainingPercent !== null || group.week.remainingPercent !== null);
+    quota: summarizeQuota(models.filter(group.matches))
+  })).filter((group) => group.quota.remainingPercent !== null);
 }
 
-function summarizeQuota(models: ModelQuota[], period: 'five-hour' | 'week'): QuotaSummary {
+function summarizeQuota(models: ModelQuota[]): QuotaSummary {
   const candidates = models
     .map((model) => ({
-      remainingPercent: period === 'five-hour' ? model.remainingPercent : model.weeklyRemainingPercent,
-      resetInText: period === 'five-hour' ? model.resetInText : model.weeklyResetInText,
-      status: period === 'five-hour' ? model.status : model.weeklyStatus
+      remainingPercent: model.remainingPercent,
+      resetInText: model.resetInText,
+      status: model.status
     }))
     .filter((quota): quota is QuotaSummary => quota.remainingPercent !== null);
 

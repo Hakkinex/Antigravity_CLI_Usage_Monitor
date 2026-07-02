@@ -10,10 +10,9 @@ describe('parseAntigravityUsageJson', () => {
     expect(snapshot.accounts).toHaveLength(4);
     expect(snapshot.accounts[0]?.displayName).toBe('account1@example.com');
     expect(snapshot.accounts[0]?.models).toHaveLength(7);
-    expect(snapshot.accounts[0]?.models[0]?.weeklyRemainingPercent).toBe(92);
-    expect(snapshot.accounts[0]?.models[0]?.weeklyResetInText).toBe('3d 4h');
+    expect(snapshot.accounts[0]?.models[0]?.remainingPercent).toBe(92);
+    expect(snapshot.accounts[0]?.models[0]?.resetInText).toBe('3d 4h');
     expect(snapshot.accounts[1]?.models[4]?.status).toBe('critical');
-    expect(snapshot.accounts[1]?.models[4]?.weeklyStatus).toBe('critical');
     expect(snapshot.accounts[1]?.models[5]?.status).toBe('exhausted');
   });
 
@@ -63,17 +62,13 @@ describe('parseAntigravityUsageJson', () => {
     expect(snapshot.accounts[0]?.models[0]?.name).toBe('Gemini 3 Flash');
     expect(snapshot.accounts[0]?.models[0]?.remainingPercent).toBe(100);
     expect(snapshot.accounts[0]?.models[0]?.resetInText).toBe('1h 30m');
-    expect(snapshot.accounts[0]?.models[0]?.weeklyRemainingPercent).toBeNull();
     expect(snapshot.accounts[0]?.models[1]?.name).toBe('Claude Opus 4.6 (Thinking)');
     expect(snapshot.accounts[0]?.models[1]?.remainingPercent).toBe(26);
     expect(snapshot.accounts[0]?.models[1]?.status).toBe('low');
     expect(snapshot.accounts[0]?.models[1]?.resetInText).toBe('11h 40m');
-    expect(snapshot.accounts[0]?.models[1]?.weeklyRemainingPercent).toBe(72);
-    expect(snapshot.accounts[0]?.models[1]?.weeklyResetInText).toBe('72h 0m');
-    expect(snapshot.accounts[0]?.models[1]?.weeklyStatus).toBe('medium');
   });
 
-  it('normalizes quotaInfos weekly windows for the monitor UI', () => {
+  it('selects the lowest-remaining window from quotaInfos for the monitor UI', () => {
     const snapshot = parseAntigravityUsageJson(
       [
         {
@@ -109,8 +104,7 @@ describe('parseAntigravityUsageJson', () => {
 
     const model = snapshot.accounts[0]?.models[0];
     expect(model?.remainingPercent).toBe(81);
-    expect(model?.weeklyRemainingPercent).toBe(97);
     expect(model?.resetInText).toBeTruthy();
-    expect(model?.weeklyResetInText).toBeTruthy();
+    expect(model?.resetAt).toBe('2026-07-01T13:00:00Z');
   });
 });

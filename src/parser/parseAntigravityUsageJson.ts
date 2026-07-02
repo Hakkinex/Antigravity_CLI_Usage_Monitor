@@ -99,81 +99,19 @@ function extractModels(record: AnyRecord): unknown[] {
 
 function normalizeModel(raw: unknown, index: number, config: MonitorConfig): ModelQuota {
   const record = isRecord(raw) ? raw : {};
-  const fiveHourRecord = findQuotaWindow(record, 'fiveHour');
-  const weeklyWindowRecord = findQuotaWindow(record, 'weekly');
   const name = firstString(record, ['name', 'model', 'modelName', 'displayName', 'label', 'modelId']) ?? `Model ${index + 1}`;
-  const remainingPercent =
-    firstNumber(record, [
-      'remainingPercent',
-      'remainingPercentage',
-      'remaining',
-      'percent',
-      'percentage',
-      'remaining_percentage',
-      'quotaRemainingPercent'
-    ]) ?? (fiveHourRecord ? firstNumber(fiveHourRecord, PERCENT_KEYS) : null);
-  const resetInText =
-    firstString(record, ['resetInText', 'resetsIn', 'resetIn', 'reset', 'resets_in']) ??
-    (fiveHourRecord ? firstString(fiveHourRecord, RESET_TEXT_KEYS) : undefined) ??
-    formatResetFromMilliseconds(
-      firstRawNumber(record, ['timeUntilResetMs']) ??
-        (fiveHourRecord ? firstRawNumber(fiveHourRecord, ['timeUntilResetMs', 'resetInMs']) : null)
-    ) ??
-    formatResetFromSeconds(
-      firstRawNumber(record, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset']) ??
-        (fiveHourRecord ? firstRawNumber(fiveHourRecord, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset']) : null)
-    ) ??
-    formatResetFromTimestamp(
-      firstString(record, ['resetAt', 'resetTime', 'reset_at']) ??
-        (fiveHourRecord ? firstString(fiveHourRecord, RESET_AT_KEYS) : undefined)
-    );
-  const resetAt =
-    firstString(record, ['resetAt', 'resetTime', 'reset_at']) ??
-    (fiveHourRecord ? firstString(fiveHourRecord, RESET_AT_KEYS) : undefined);
-  const weeklyRecord = firstRecord(record, ['weekly', 'week', 'weeklyQuota', 'weeklyUsage', 'weekUsage']) ?? weeklyWindowRecord;
-  const weeklyRemainingPercent =
-    firstNumber(record, [
-      'weeklyRemainingPercent',
-      'weeklyRemainingPercentage',
-      'weekRemainingPercent',
-      'weekRemainingPercentage',
-      'weeklyRemaining',
-      'weekRemaining',
-      'weekly_percentage',
-      'weeklyPercent'
-    ]) ?? (weeklyRecord ? firstNumber(weeklyRecord, PERCENT_KEYS) : null);
-  const weeklyResetInText =
-    firstString(record, ['weeklyResetInText', 'weeklyResetsIn', 'weeklyResetIn', 'weekResetIn', 'weekResetsIn']) ??
-    (weeklyRecord ? firstString(weeklyRecord, RESET_TEXT_KEYS) : undefined) ??
-    formatResetFromMilliseconds(
-      firstRawNumber(record, ['weeklyTimeUntilResetMs', 'weekTimeUntilResetMs', 'weeklyResetInMs']) ??
-        (weeklyRecord ? firstRawNumber(weeklyRecord, ['timeUntilResetMs', 'resetInMs']) : null)
-    ) ??
-    formatResetFromSeconds(
-      firstRawNumber(record, ['weeklyResetInSeconds', 'weekResetInSeconds', 'weeklyResetSeconds']) ??
-        (weeklyRecord ? firstRawNumber(weeklyRecord, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset']) : null)
-    ) ??
-    formatResetFromTimestamp(
-      firstString(record, ['weeklyResetTime', 'weeklyResetAt', 'weekResetTime', 'weekResetAt']) ??
-        (weeklyRecord ? firstString(weeklyRecord, RESET_AT_KEYS) : undefined)
-    );
-  const weeklyResetAt =
-    firstString(record, ['weeklyResetAt', 'weekResetAt', 'weeklyResetTime']) ??
-    (weeklyRecord ? firstString(weeklyRecord, RESET_AT_KEYS) : undefined);
+  const bestQuota = selectBestQuota(record);
   const group = getModelGroup(name);
 
   return {
     id: `${group}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
     name,
     group,
-    remainingPercent,
-    resetInText,
-    resetAt,
-    status: getModelStatus(remainingPercent, config),
-    weeklyRemainingPercent,
-    weeklyResetInText,
-    weeklyResetAt,
-    weeklyStatus: getModelStatus(weeklyRemainingPercent, config)
+    remainingPercent: bestQuota.remainingPercent,
+    resetInText: bestQuota.resetInText,
+    resetAt: bestQuota.resetAt,
+    status: getModelStatus(bestQuota.remainingPercent, config),
+    isAutocompleteOnly: firstBoolean(record, ['isAutocompleteOnly'])
   };
 }
 
@@ -191,48 +129,103 @@ const PERCENT_KEYS = [
 const RESET_TEXT_KEYS = ['resetInText', 'resetsIn', 'resetIn', 'reset', 'resets_in'];
 const RESET_AT_KEYS = ['resetAt', 'resetTime', 'reset_at'];
 
-function findQuotaWindow(record: AnyRecord, target: 'fiveHour' | 'weekly'): AnyRecord | undefined {
+type QuotaCandidate = {
+  remainingPercent: number | null;
+  resetInText: string | null;
+  resetAt: string | null;
+};
+
+function selectBestQuota(record: AnyRecord): QuotaCandidate {
+  const candidates = collectQuotaCandidates(record).filter(
+    (candidate) => candidate.remainingPercent !== null || candidate.resetInText !== null || candidate.resetAt !== null
+  );
+
+  if (candidates.length === 0) {
+    return {
+      remainingPercent: null,
+      resetInText: null,
+      resetAt: null
+    };
+  }
+
+  return candidates.reduce((best, candidate) => {
+    if (best.remainingPercent === null) return candidate;
+    if (candidate.remainingPercent === null) return best;
+    return candidate.remainingPercent < best.remainingPercent ? candidate : best;
+  });
+}
+
+function collectQuotaCandidates(record: AnyRecord): QuotaCandidate[] {
+  const candidates: QuotaCandidate[] = [readQuotaCandidate(record)];
   const windows = firstRecord(record, ['windows']);
   if (windows) {
-    for (const [key, value] of Object.entries(windows)) {
-      if (isRecord(value) && classifyWindowKey(key, value) === target) return value;
+    for (const value of Object.values(windows)) {
+      if (isRecord(value)) candidates.push(readQuotaCandidate(value));
     }
   }
 
   const quotaInfos = record.quotaInfos;
   if (Array.isArray(quotaInfos)) {
     for (const quotaInfo of quotaInfos) {
-      if (isRecord(quotaInfo) && classifyWindowKey('', quotaInfo) === target) return quotaInfo;
+      if (isRecord(quotaInfo)) candidates.push(readQuotaCandidate(quotaInfo));
     }
   }
 
-  const quotaInfo = firstRecord(record, ['quotaInfo']);
-  if (quotaInfo && target === 'fiveHour') return quotaInfo;
-  return undefined;
-}
-
-function classifyWindowKey(key: string, record: AnyRecord): 'fiveHour' | 'weekly' | 'unknown' {
-  const combined = [
-    key,
-    firstString(record, ['id', 'windowId', 'window_id']),
-    firstString(record, ['label', 'windowLabel', 'window_label'])
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-
-  if (combined.includes('week')) return 'weekly';
-  if (
-    combined.includes('five') ||
-    combined.includes('5h') ||
-    combined.includes('5 hour') ||
-    combined.includes('5-hour') ||
-    combined.includes('fivehour')
-  ) {
-    return 'fiveHour';
+  const directRecords = ['quotaInfo', 'weekly', 'week', 'weeklyQuota', 'weeklyUsage', 'weekUsage'] as const;
+  for (const key of directRecords) {
+    const child = firstRecord(record, [key]);
+    if (child) candidates.push(readQuotaCandidate(child));
   }
 
-  return 'unknown';
+  const legacyWeekly = readLegacyWeeklyCandidate(record);
+  if (legacyWeekly.remainingPercent !== null || legacyWeekly.resetInText !== null || legacyWeekly.resetAt !== null) {
+    candidates.push(legacyWeekly);
+  }
+
+  return dedupeCandidates(candidates);
+}
+
+function readQuotaCandidate(record: AnyRecord): QuotaCandidate {
+  return {
+    remainingPercent: firstNumber(record, PERCENT_KEYS),
+    resetInText:
+      firstString(record, RESET_TEXT_KEYS) ??
+      formatResetFromMilliseconds(firstRawNumber(record, ['timeUntilResetMs', 'resetInMs'])) ??
+      formatResetFromSeconds(firstRawNumber(record, ['resetInSeconds', 'resetSeconds', 'secondsUntilReset'])) ??
+      formatResetFromTimestamp(firstString(record, RESET_AT_KEYS)),
+    resetAt: firstString(record, RESET_AT_KEYS) ?? null
+  };
+}
+
+function readLegacyWeeklyCandidate(record: AnyRecord): QuotaCandidate {
+  return {
+    remainingPercent: firstNumber(record, [
+      'weeklyRemainingPercent',
+      'weeklyRemainingPercentage',
+      'weekRemainingPercent',
+      'weekRemainingPercentage',
+      'weeklyRemaining',
+      'weekRemaining',
+      'weekly_percentage',
+      'weeklyPercent'
+    ]),
+    resetInText:
+      firstString(record, ['weeklyResetInText', 'weeklyResetsIn', 'weeklyResetIn', 'weekResetIn', 'weekResetsIn']) ??
+      formatResetFromMilliseconds(firstRawNumber(record, ['weeklyTimeUntilResetMs', 'weekTimeUntilResetMs', 'weeklyResetInMs'])) ??
+      formatResetFromSeconds(firstRawNumber(record, ['weeklyResetInSeconds', 'weekResetInSeconds', 'weeklyResetSeconds'])) ??
+      formatResetFromTimestamp(firstString(record, ['weeklyResetTime', 'weeklyResetAt', 'weekResetTime', 'weekResetAt'])),
+    resetAt: firstString(record, ['weeklyResetAt', 'weekResetAt', 'weeklyResetTime']) ?? null
+  };
+}
+
+function dedupeCandidates(candidates: QuotaCandidate[]): QuotaCandidate[] {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = JSON.stringify(candidate);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 function looksLikeAccount(raw: AnyRecord): boolean {
   return Boolean(raw.email || raw.models || raw.quotas || raw.quota || (isRecord(raw.snapshot) && (raw.snapshot.email || raw.snapshot.models || raw.snapshot.quotas || raw.snapshot.quota)));

@@ -15,16 +15,15 @@ const GROUPS = [
 export function buildQuotaGroups(models) {
     return GROUPS.map((group) => ({
         label: group.label,
-        fiveHour: summarizeQuota(models.filter(group.matches), 'five-hour'),
-        week: summarizeQuota(models.filter(group.matches), 'week')
-    })).filter((group) => group.fiveHour.remainingPercent !== null || group.week.remainingPercent !== null);
+        quota: summarizeQuota(models.filter(group.matches))
+    })).filter((group) => group.quota.remainingPercent !== null);
 }
-function summarizeQuota(models, period) {
+function summarizeQuota(models) {
     const candidates = models
         .map((model) => ({
-        remainingPercent: period === 'five-hour' ? model.remainingPercent : model.weeklyRemainingPercent,
-        resetInText: period === 'five-hour' ? model.resetInText : model.weeklyResetInText,
-        status: period === 'five-hour' ? model.status : model.weeklyStatus
+        remainingPercent: model.remainingPercent,
+        resetInText: model.resetInText,
+        status: model.status
     }))
         .filter((quota) => quota.remainingPercent !== null);
     if (candidates.length === 0) {

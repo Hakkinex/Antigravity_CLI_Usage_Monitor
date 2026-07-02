@@ -16,6 +16,12 @@ export type FetchQuotaOptions = {
   refresh?: boolean;
 };
 
+function expectedSourceForMethod(method: QuotaMethod | undefined): QuotaSnapshot['source'] | undefined {
+  if (method === 'google') return 'google';
+  if (method === 'local') return 'local';
+  return undefined;
+}
+
 export async function fetchQuotaSnapshot(options: FetchQuotaOptions = {}): Promise<QuotaSnapshot> {
   const manager = getAccountManager();
   const originalActiveEmail = manager.getActiveEmail();
@@ -61,7 +67,7 @@ export async function fetchAllQuotaSnapshots(options: FetchQuotaOptions = {}): P
   for (const email of emails) {
     const isActive = email === activeEmail;
     try {
-      if (!options.refresh && isCacheValid(email)) {
+      if (!options.refresh && isCacheValid(email, { method, source: expectedSourceForMethod(method) })) {
         const cached = loadCache(email);
         if (cached) {
           results.push({ email, isActive, status: 'cached', snapshot: cached, cacheAge: getCacheAge(email) ?? 0 });
@@ -117,7 +123,7 @@ async function fetchLocalQuotaSnapshots(
     return [{ email, isActive, status: 'success', snapshot }];
   } catch (error) {
     const email = requestedEmail ?? activeEmail ?? 'local';
-    const cached = loadCache(email);
+    const cached = isCacheValid(email, { method: 'local', source: 'local' }) ? loadCache(email) : null;
     if (cached) {
       return [{ email, isActive: email === activeEmail, status: 'cached', snapshot: cached, cacheAge: getCacheAge(email) ?? 0 }];
     }

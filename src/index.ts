@@ -212,6 +212,7 @@ Debug dump options:
   --account <email>  Dump one account instead of all accounts
   --no-all           Dump active account only
   --use-cache        Allow cached quota data; default forces refresh
+  --no-cache         Alias of default refresh behavior for explicit debugging
   --all-models       Include autocomplete models
   --output <dir>     Output directory, default .agy-monitor-debug
 
