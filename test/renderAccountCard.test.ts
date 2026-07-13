@@ -40,14 +40,32 @@ describe('renderAccountCard', () => {
     const output = stripAnsi(renderAccountCard(account).join('\n'));
 
     expect(output).toContain('Gemini Flash/Pro');
+    expect(renderAccountCard(account).join('\n')).toContain('\u001b[38;5;196m●\u001b[0m');
     expect(output).toContain('0% 36m');
+  });
+
+  it('shows reset time even when provider omits remaining percentage', () => {
+    const account: AccountQuota = {
+      id: 'user@example.com',
+      displayName: 'user@example.com',
+      status: 'ok',
+      models: [model('Claude Sonnet 4.6 (Thinking)', 'claude', null, '3h 22m')]
+    };
+
+    const output = stripAnsi(renderAccountCard(account).join('\n'));
+
+    expect(output).toContain('Claude Opus/Sonnet/GPT');
+    expect(output).toContain('● 3h22m');
+    expect(output).toContain('3h22m');
+    expect(output).not.toContain('no data');
+    expect(output).not.toContain('?');
   });
 });
 
 function model(
   name: string,
   group: ModelQuota['group'],
-  remainingPercent: number,
+  remainingPercent: number | null,
   resetInText: string
 ): ModelQuota {
   return {
@@ -56,6 +74,13 @@ function model(
     group,
     remainingPercent,
     resetInText,
-    status: remainingPercent > 80 ? 'healthy' : 'medium'
+    status:
+      remainingPercent === null
+        ? 'unknown'
+        : remainingPercent <= 0
+          ? 'exhausted'
+          : remainingPercent > 80
+            ? 'healthy'
+            : 'medium'
   };
 }

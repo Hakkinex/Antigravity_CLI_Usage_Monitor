@@ -28,8 +28,10 @@ export function statusDot(status: ModelStatus): string {
     case 'critical':
       return '\u001b[38;5;203m●\u001b[0m';
     case 'exhausted':
+      return '\u001b[38;5;196m●\u001b[0m';
+    case 'unknown':
       return '\u001b[38;5;245m●\u001b[0m';
     default:
-      return '\u001b[38;5;245m?\u001b[0m';
+      return '\u001b[38;5;245m●\u001b[0m';
   }
 }
