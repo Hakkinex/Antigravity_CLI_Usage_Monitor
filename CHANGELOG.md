@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0
+
+- Removed embedded Google OAuth credentials and now require `ANTIGRAVITY_OAUTH_CLIENT_ID` and `ANTIGRAVITY_OAUTH_CLIENT_SECRET` for login and token refresh.
+- Hardened OAuth state generation, callback HTML escaping, request timeouts, error handling, and sensitive debug logging.
+- Restricted local Connect RPC access to loopback addresses and redacted Antigravity CSRF tokens from stored and logged process command lines.
+- Replaced shell-interpolated PID commands with validated `execFile` calls and added command output limits.
+- Enforced private `0700` directory and `0600` file permissions for account tokens, caches, configuration, metadata, and wake-up history.
+- Added path traversal and recursive deletion guards for account storage.
+- Added security regression tests, expanded loopback coverage, and verified zero npm dependency vulnerabilities.
+- Rewrote repository history to remove the previously published OAuth credential from active branches and tags. The old credential must still be revoked or rotated by its owner.
+
 ## 1.1.0
 
 - Replaced the monitor's separate `5h` and `Week` columns with a single `Quota` column that shows the most constrained real quota window and its true reset time.
