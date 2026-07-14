@@ -4,7 +4,7 @@ import { color, dim, padRight, stripAnsi } from '../utils/text.js';
 export function renderDashboard(state, options) {
     const terminalWidth = process.stdout.columns || 120;
     const lines = [];
-    lines.push(twoCol(color('agy-monitor', 118), `Last update: ${state.snapshot ? new Date(state.snapshot.fetchedAt).toLocaleTimeString() : 'never'}`, terminalWidth));
+    lines.push(twoCol(color('Antigravity CLI Usage Monitor', 118), `Last update: ${state.snapshot ? new Date(state.snapshot.fetchedAt).toLocaleTimeString() : 'never'}`, terminalWidth));
     lines.push(renderRefreshLine(state.snapshot?.source ?? 'pending', String(options.method), state.isFetching ? color('Fetching...', 221) : `Next refresh: ${state.nextRefreshInSec}s`, terminalWidth));
     lines.push(twoCol(`Accounts: ${state.snapshot?.accounts.length ?? 0}`, 'Press r refresh, q quit', terminalWidth));
     if (state.command && options.debug) {

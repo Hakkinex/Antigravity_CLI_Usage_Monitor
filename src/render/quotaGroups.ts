@@ -22,7 +22,7 @@ const GROUPS: GroupDefinition[] = [
     matches: (model) => model.group === 'gemini'
   },
   {
-    label: 'Claude Opus/Sonnet/GPT',
+    label: 'Claude/ChatGPT',
     matches: (model) => model.group === 'claude' || model.group === 'gpt'
   },
   {
@@ -35,7 +35,7 @@ export function buildQuotaGroups(models: ModelQuota[]): RenderQuotaGroup[] {
   return GROUPS.map((group) => ({
     label: group.label,
     quota: summarizeQuota(models.filter(group.matches))
-  })).filter((group) => group.quota.remainingPercent !== null);
+  })).filter((group) => group.quota.remainingPercent !== null || group.quota.resetInText !== null);
 }
 
 function summarizeQuota(models: ModelQuota[]): QuotaSummary {
@@ -45,7 +45,7 @@ function summarizeQuota(models: ModelQuota[]): QuotaSummary {
       resetInText: model.resetInText,
       status: model.status
     }))
-    .filter((quota): quota is QuotaSummary => quota.remainingPercent !== null);
+    .filter((quota) => quota.remainingPercent !== null || quota.resetInText !== null);
 
   if (candidates.length === 0) {
     return {
@@ -55,11 +55,13 @@ function summarizeQuota(models: ModelQuota[]): QuotaSummary {
     };
   }
 
-  return candidates.reduce((lowest, quota) =>
-    quota.remainingPercent !== null &&
-    lowest.remainingPercent !== null &&
-    quota.remainingPercent < lowest.remainingPercent
-      ? quota
-      : lowest
-  );
+  return candidates.reduce((best, quota) => {
+    if (best.remainingPercent === null && quota.remainingPercent !== null) return quota;
+    if (quota.remainingPercent === null && best.remainingPercent !== null) return best;
+    if (best.remainingPercent === null && quota.remainingPercent === null) {
+      if (best.resetInText === null && quota.resetInText !== null) return quota;
+      return best;
+    }
+    return quota.remainingPercent! < best.remainingPercent! ? quota : best;
+  });
 }

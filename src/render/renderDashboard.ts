@@ -17,7 +17,7 @@ export function renderDashboard(state: RenderState, options: WatchOptions): stri
 
   lines.push(
     twoCol(
-      color('agy-monitor', 118),
+      color('Antigravity CLI Usage Monitor', 118),
       `Last update: ${state.snapshot ? new Date(state.snapshot.fetchedAt).toLocaleTimeString() : 'never'}`,
       terminalWidth
     )

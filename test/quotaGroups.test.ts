@@ -12,13 +12,23 @@ describe('buildQuotaGroups', () => {
 
     expect(groups).toEqual([
       expect.objectContaining({ label: 'Gemini Flash/Pro', quota: expect.objectContaining({ remainingPercent: 70, resetInText: '3h' }) }),
-      expect.objectContaining({ label: 'Claude Opus/Sonnet/GPT', quota: expect.objectContaining({ remainingPercent: 80, resetInText: '6h' }) })
+      expect.objectContaining({ label: 'Claude/ChatGPT', quota: expect.objectContaining({ remainingPercent: 80, resetInText: '6h' }) })
     ]);
   });
 
   it('filters groups with no quota data', () => {
     const groups = buildQuotaGroups([model('o1', 'other', null, null)]);
     expect(groups).toEqual([]);
+  });
+
+  it('keeps groups that only have reset time', () => {
+    const groups = buildQuotaGroups([model('c1', 'claude', null, '3h 22m')]);
+    expect(groups).toEqual([
+      expect.objectContaining({
+        label: 'Claude/ChatGPT',
+        quota: expect.objectContaining({ remainingPercent: null, resetInText: '3h 22m' })
+      })
+    ]);
   });
 });
 

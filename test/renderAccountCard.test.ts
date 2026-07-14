@@ -22,7 +22,7 @@ describe('renderAccountCard', () => {
     const output = stripAnsi(renderAccountCard(account).join('\n'));
 
     expect(output).toContain('Gemini Flash/Pro');
-    expect(output).toContain('Claude Opus/Sonnet/GPT');
+    expect(output).toContain('Claude/ChatGPT');
     expect(output).toContain('97% 4h4m');
     expect(output).toContain('91% 130h1m');
     expect(output).toContain('Quota');
@@ -54,7 +54,7 @@ describe('renderAccountCard', () => {
 
     const output = stripAnsi(renderAccountCard(account).join('\n'));
 
-    expect(output).toContain('Claude Opus/Sonnet/GPT');
+    expect(output).toContain('Claude/ChatGPT');
     expect(output).toContain('● 3h22m');
     expect(output).toContain('3h22m');
     expect(output).not.toContain('no data');

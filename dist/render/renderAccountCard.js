@@ -32,10 +32,12 @@ export function renderAccountCard(account, options = { allModels: false }) {
     return lines;
 }
 function quotaCell(status, percent, reset) {
-    if (percent === null)
+    if (percent === null && !reset)
         return dim('no data');
-    const remain = `${percent}%`;
     const resetText = compactReset(reset);
+    if (percent === null)
+        return `${statusDot(status)} ${resetText}`;
+    const remain = `${percent}%`;
     return `${statusDot(status)} ${remain}${resetText ? ` ${resetText}` : ''}`;
 }
 function compactReset(reset) {

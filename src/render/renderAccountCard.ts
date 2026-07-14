@@ -41,9 +41,10 @@ export function renderAccountCard(account: AccountQuota, options: Pick<WatchOpti
 }
 
 function quotaCell(status: Parameters<typeof statusDot>[0], percent: number | null, reset: string | null): string {
-  if (percent === null) return dim('no data');
-  const remain = `${percent}%`;
+  if (percent === null && !reset) return dim('no data');
   const resetText = compactReset(reset);
+  if (percent === null) return `${statusDot(status)} ${resetText}`;
+  const remain = `${percent}%`;
   return `${statusDot(status)} ${remain}${resetText ? ` ${resetText}` : ''}`;
 }
 
