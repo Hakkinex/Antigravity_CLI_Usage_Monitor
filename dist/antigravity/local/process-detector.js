@@ -1,10 +1,11 @@
 /**
  * Process detector - finds running Antigravity language server processes
  */
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { debug } from '../core/logger.js';
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+const MAX_COMMAND_OUTPUT = 10 * 1024 * 1024;
 /**
  * Detects running Antigravity language server processes
  * Returns process info including PID and extracted command-line arguments
@@ -27,7 +28,7 @@ async function detectOnUnix() {
     try {
         // Use ps to list all processes with full command line
         // Look for processes containing 'antigravity' in their command
-        const { stdout } = await execAsync('ps aux');
+        const { stdout } = await execFileAsync('ps', ['aux'], { maxBuffer: MAX_COMMAND_OUTPUT });
         const lines = stdout.split('\n');
         for (const line of lines) {
             const lower = line.toLowerCase();
@@ -47,7 +48,7 @@ async function detectOnUnix() {
             if (!hasServerSignal) {
                 continue;
             }
-            debug('process-detector', `Found potential Antigravity process: ${line}`);
+            debug('process-detector', `Found potential Antigravity process: ${redactCommandLine(line)}`);
             const processInfo = parseUnixProcessLine(line);
             if (processInfo) {
                 return processInfo;
@@ -75,15 +76,15 @@ function parseUnixProcessLine(line) {
         return null;
     }
     // Command is everything from index 10 onwards
-    const commandLine = parts.slice(10).join(' ');
+    const rawCommandLine = parts.slice(10).join(' ');
     // Extract arguments from command line
-    const csrfToken = extractArgument(commandLine, '--csrf_token');
-    const extensionServerPort = extractArgument(commandLine, '--extension_server_port');
+    const csrfToken = extractArgument(rawCommandLine, '--csrf_token');
+    const extensionServerPort = extractArgument(rawCommandLine, '--extension_server_port');
     return {
         pid,
         csrfToken: csrfToken || undefined,
         extensionServerPort: extensionServerPort ? parseInt(extensionServerPort, 10) : undefined,
-        commandLine
+        commandLine: redactCommandLine(rawCommandLine)
     };
 }
 /**
@@ -92,7 +93,7 @@ function parseUnixProcessLine(line) {
 async function detectOnWindows() {
     try {
         // Use WMIC to get process details with command line
-        const { stdout } = await execAsync('wmic process where "name like \'%antigravity%\' or commandline like \'%antigravity%\'" get processid,commandline /format:csv', { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for long command lines
+        const { stdout } = await execFileAsync('wmic', ['process', 'where', "name like '%antigravity%' or commandline like '%antigravity%'", 'get', 'processid,commandline', '/format:csv'], { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for long command lines
         );
         const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,CommandLine,ProcessId'));
         const candidates = [];
@@ -107,7 +108,7 @@ async function detectOnWindows() {
                         pid,
                         csrfToken: extractArgument(commandLine, '--csrf_token') || undefined,
                         extensionServerPort: parsePortValue(extractArgument(commandLine, '--extension_server_port')),
-                        commandLine
+                        commandLine: redactCommandLine(commandLine)
                     });
                 }
             }
@@ -130,7 +131,7 @@ async function detectOnWindows() {
  */
 async function detectOnWindowsPowerShell() {
     try {
-        const { stdout } = await execAsync('powershell -Command "Get-Process | Where-Object { $_.ProcessName -like \'*antigravity*\' } | Select-Object Id, ProcessName | ConvertTo-Json"');
+        const { stdout } = await execFileAsync('powershell', ['-NoProfile', '-Command', "Get-Process | Where-Object { $_.ProcessName -like '*antigravity*' } | Select-Object Id, ProcessName | ConvertTo-Json"], { maxBuffer: MAX_COMMAND_OUTPUT });
         if (!stdout.trim()) {
             return null;
         }
@@ -138,18 +139,19 @@ async function detectOnWindowsPowerShell() {
         const processList = Array.isArray(processes) ? processes : [processes];
         const candidates = [];
         for (const proc of processList) {
-            if (proc.Id) {
+            const pid = typeof proc?.Id === 'number' ? proc.Id : Number.parseInt(String(proc?.Id ?? ''), 10);
+            if (Number.isInteger(pid) && pid > 0) {
                 // Get command line for this process
-                const { stdout: cmdLine } = await execAsync(`powershell -Command "(Get-CimInstance Win32_Process -Filter 'ProcessId = ${proc.Id}').CommandLine"`);
+                const { stdout: cmdLine } = await execFileAsync('powershell', ['-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}').CommandLine`], { maxBuffer: MAX_COMMAND_OUTPUT });
                 const commandLine = cmdLine.trim();
                 if (!commandLine.toLowerCase().includes('antigravity')) {
                     continue;
                 }
                 candidates.push({
-                    pid: proc.Id,
+                    pid,
                     csrfToken: extractArgument(commandLine, '--csrf_token') || undefined,
                     extensionServerPort: parsePortValue(extractArgument(commandLine, '--extension_server_port')),
-                    commandLine
+                    commandLine: redactCommandLine(commandLine)
                 });
             }
         }
@@ -164,6 +166,11 @@ async function detectOnWindowsPowerShell() {
         debug('process-detector', 'Error detecting process on Windows with PowerShell', err);
         return null;
     }
+}
+function redactCommandLine(commandLine) {
+    return commandLine
+        .replace(/(--csrf_token(?:=|\s+))["']?[^\s"']+/gi, '$1[REDACTED]')
+        .replace(/(--csrf-token(?:=|\s+))["']?[^\s"']+/gi, '$1[REDACTED]');
 }
 function parsePortValue(rawPort) {
     if (!rawPort) {

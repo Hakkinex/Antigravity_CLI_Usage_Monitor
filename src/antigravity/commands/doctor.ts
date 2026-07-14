@@ -65,13 +65,13 @@ export function doctorCommand(): void {
   const hasClientSecret = !!process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET
   
   if (hasClientId || hasClientSecret) {
-    console.log('  Using custom OAuth credentials:')
+    console.log('  OAuth credentials:')
     console.log(`    ANTIGRAVITY_OAUTH_CLIENT_ID: ${hasClientId ? 'Set' : 'Not set'}`)
     console.log(`    ANTIGRAVITY_OAUTH_CLIENT_SECRET: ${hasClientSecret ? 'Set' : 'Not set'}`)
   } else {
-    console.log('  ✅ Using built-in OAuth credentials')
-    console.log('  💡 Set ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET')
-    console.log('     environment variables to override the built-in credentials.')
+    console.log('  ❌ OAuth credentials are not configured')
+    console.log('  💡 Set ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET,')
+    console.log('     then log in again with the rotated credential.')
   }
   
   console.log()

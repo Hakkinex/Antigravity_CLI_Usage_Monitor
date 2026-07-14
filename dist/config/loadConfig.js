@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { defaultConfig } from './defaultConfig.js';
+import { setPrivateFilePermissions } from '../antigravity/core/permissions.js';
 export function getConfigPath() {
     if (process.platform === 'win32') {
         const base = process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming');
@@ -14,6 +15,7 @@ export function loadConfig(path = getConfigPath()) {
         return defaultConfig;
     }
     try {
+        setPrivateFilePermissions(path);
         const parsed = JSON.parse(readFileSync(path, 'utf8'));
         const safeConfig = stripUndefined(normalizeConfig(parsed));
         return {

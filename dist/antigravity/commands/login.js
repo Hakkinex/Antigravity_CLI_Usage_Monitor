@@ -27,7 +27,7 @@ export async function loginCommand(options) {
         logError(`Login failed: ${message}`);
         if (message.includes('ANTIGRAVITY_OAUTH_CLIENT_ID') || message.includes('ANTIGRAVITY_OAUTH_CLIENT_SECRET')) {
             info('');
-            info('Set `ANTIGRAVITY_OAUTH_CLIENT_ID` and `ANTIGRAVITY_OAUTH_CLIENT_SECRET` only if you need to override the built-in OAuth credentials.');
+            info('Set `ANTIGRAVITY_OAUTH_CLIENT_ID` and `ANTIGRAVITY_OAUTH_CLIENT_SECRET`, then log in again.');
         }
         process.exit(1);
     }

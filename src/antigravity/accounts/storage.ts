@@ -3,9 +3,10 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from 'node:fs'
-import { join, basename } from 'node:path'
+import { join, relative } from 'node:path'
 import { getAccountsDir, getAccountDir } from '../core/env.js'
 import { debug } from '../core/logger.js'
+import { setPrivateDirectoryPermissions, setPrivateFilePermissions } from '../core/permissions.js'
 import type { StoredTokens } from '../quota/types.js'
 import type { AccountMetadata, CachedQuota } from './types.js'
 
@@ -16,8 +17,9 @@ export function ensureAccountsDir(): void {
   const dir = getAccountsDir()
   if (!existsSync(dir)) {
     debug('accounts-storage', `Creating accounts directory: ${dir}`)
-    mkdirSync(dir, { recursive: true })
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
   }
+  setPrivateDirectoryPermissions(dir)
 }
 
 /**
@@ -28,8 +30,9 @@ export function ensureAccountDir(email: string): void {
   const dir = getAccountDir(email)
   if (!existsSync(dir)) {
     debug('accounts-storage', `Creating account directory: ${dir}`)
-    mkdirSync(dir, { recursive: true })
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
   }
+  setPrivateDirectoryPermissions(dir)
 }
 
 /**
@@ -84,6 +87,7 @@ export function saveAccountTokens(email: string, tokens: StoredTokens): void {
   
   debug('accounts-storage', `Saving tokens for ${email}`)
   writeFileSync(path, JSON.stringify(tokens, null, 2), { mode: 0o600 })
+  setPrivateFilePermissions(path)
 }
 
 /**
@@ -98,6 +102,7 @@ export function loadAccountTokens(email: string): StoredTokens | null {
   }
   
   try {
+    setPrivateFilePermissions(path)
     const content = readFileSync(path, 'utf-8')
     return JSON.parse(content) as StoredTokens
   } catch (err) {
@@ -119,6 +124,7 @@ export function saveAccountMetadata(email: string, metadata: AccountMetadata): v
   
   debug('accounts-storage', `Saving metadata for ${email}`)
   writeFileSync(path, JSON.stringify(metadata, null, 2), { mode: 0o600 })
+  setPrivateFilePermissions(path)
 }
 
 /**
@@ -132,6 +138,7 @@ export function loadAccountMetadata(email: string): AccountMetadata | null {
   }
   
   try {
+    setPrivateFilePermissions(path)
     const content = readFileSync(path, 'utf-8')
     return JSON.parse(content) as AccountMetadata
   } catch (err) {
@@ -163,7 +170,8 @@ export function saveAccountCache(email: string, cache: CachedQuota): void {
   const path = join(getAccountDir(email), 'cache.json')
   
   debug('accounts-storage', `Saving cache for ${email}`)
-  writeFileSync(path, JSON.stringify(cache, null, 2))
+  writeFileSync(path, JSON.stringify(cache, null, 2), { mode: 0o600 })
+  setPrivateFilePermissions(path)
 }
 
 /**
@@ -177,6 +185,7 @@ export function loadAccountCache(email: string): CachedQuota | null {
   }
   
   try {
+    setPrivateFilePermissions(path)
     const content = readFileSync(path, 'utf-8')
     return JSON.parse(content) as CachedQuota
   } catch (err) {
@@ -210,6 +219,11 @@ export function deleteAccountCache(email: string): void {
  */
 export function deleteAccount(email: string): boolean {
   const dir = getAccountDir(email)
+  const relativePath = relative(getAccountsDir(), dir)
+
+  if (!relativePath || relativePath.startsWith('..')) {
+    throw new Error('Refusing to delete a path outside the accounts directory')
+  }
   
   if (!existsSync(dir)) {
     debug('accounts-storage', `Account ${email} does not exist`)

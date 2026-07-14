@@ -2,6 +2,7 @@
  * OAuth configuration and flow
  */
 import { createServer } from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { URL, URLSearchParams } from 'node:url';
 import open from 'open';
 import inquirer from 'inquirer';
@@ -9,8 +10,6 @@ import { debug, info } from '../core/logger.js';
 import { getAccountManager } from '../accounts/index.js';
 // OAuth configuration
 const OAUTH_CONFIG = {
-    clientId: process.env.ANTIGRAVITY_OAUTH_CLIENT_ID || 'REMOVED_OAUTH_CLIENT_ID',
-    clientSecret: process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET || 'REMOVED_OAUTH_CLIENT_SECRET',
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
     scopes: [
@@ -18,6 +17,15 @@ const OAUTH_CONFIG = {
         'https://www.googleapis.com/auth/userinfo.email'
     ]
 };
+const GOOGLE_REQUEST_TIMEOUT_MS = 30_000;
+function getOAuthCredentials() {
+    const clientId = process.env.ANTIGRAVITY_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+        throw new Error('Google OAuth credentials are not configured. Set ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET.');
+    }
+    return { clientId, clientSecret };
+}
 // Cloud Code API configuration
 const CLOUDCODE_CONFIG = {
     baseUrl: 'https://cloudcode-pa.googleapis.com',
@@ -34,7 +42,15 @@ const CLOUDCODE_CONFIG = {
  * Generate a random state parameter for CSRF protection
  */
 function generateState() {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    return randomBytes(32).toString('hex');
+}
+function escapeHtml(value) {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
 }
 /**
  * Get available port for callback server
@@ -60,10 +76,11 @@ async function getAvailablePort(preferredPort) {
  */
 async function exchangeCodeForTokens(code, redirectUri) {
     debug('oauth', 'Exchanging code for tokens');
+    const credentials = getOAuthCredentials();
     const params = new URLSearchParams({
         code,
-        client_id: OAUTH_CONFIG.clientId,
-        client_secret: OAUTH_CONFIG.clientSecret,
+        client_id: credentials.clientId,
+        client_secret: credentials.clientSecret,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code'
     });
@@ -72,12 +89,12 @@ async function exchangeCodeForTokens(code, redirectUri) {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: params.toString()
+        body: params.toString(),
+        signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
     });
     if (!response.ok) {
-        const error = await response.text();
-        debug('oauth', 'Token exchange failed', error);
-        throw new Error(`Token exchange failed: ${response.status} ${error}`);
+        debug('oauth', `Token exchange failed: ${response.status}`);
+        throw new Error(`Token exchange failed: ${response.status}`);
     }
     const data = await response.json();
     debug('oauth', 'Token exchange successful');
@@ -92,7 +109,8 @@ async function getUserEmail(accessToken) {
         const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
             headers: {
                 Authorization: `Bearer ${accessToken}`
-            }
+            },
+            signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
         });
         if (response.ok) {
             const data = await response.json();
@@ -173,7 +191,8 @@ async function tryOnboardUser(accessToken, tierId) {
                     'Content-Type': 'application/json',
                     'User-Agent': CLOUDCODE_CONFIG.userAgent
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
             });
             if (!response.ok) {
                 debug('oauth', `Onboard request failed: ${response.status}`);
@@ -224,7 +243,8 @@ export async function resolveProjectId(accessToken) {
                 'Content-Type': 'application/json',
                 'User-Agent': CLOUDCODE_CONFIG.userAgent
             },
-            body: JSON.stringify({ metadata: CLOUDCODE_CONFIG.metadata })
+            body: JSON.stringify({ metadata: CLOUDCODE_CONFIG.metadata }),
+            signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
         });
         if (!response.ok) {
             debug('oauth', `loadCodeAssist failed: ${response.status}`);
@@ -300,13 +320,14 @@ async function completeLogin(code, redirectUri) {
  * Start OAuth login flow
  */
 export async function startOAuthFlow(options = {}) {
+    const credentials = getOAuthCredentials();
     const port = await getAvailablePort(options.port);
     const redirectUri = `http://127.0.0.1:${port}/callback`;
     const state = generateState();
     debug('oauth', `Starting OAuth flow on port ${port}`);
     // Build authorization URL
     const authParams = new URLSearchParams({
-        client_id: OAUTH_CONFIG.clientId,
+        client_id: credentials.clientId,
         redirect_uri: redirectUri,
         response_type: 'code',
         scope: OAUTH_CONFIG.scopes.join(' '),
@@ -388,7 +409,7 @@ export async function startOAuthFlow(options = {}) {
             <html>
               <body style="font-family: system-ui; padding: 40px; text-align: center;">
                 <h1>Login Successful!</h1>
-                <p>You are now logged in${result.email ? ` as <strong>${result.email}</strong>` : ''}.</p>
+                <p>You are now logged in${result.email ? ` as <strong>${escapeHtml(result.email)}</strong>` : ''}.</p>
                 <p>You can close this window and return to the terminal.</p>
               </body>
             </html>
@@ -444,10 +465,11 @@ export async function startOAuthFlow(options = {}) {
  */
 export async function refreshAccessToken(refreshToken) {
     debug('oauth', 'Refreshing access token');
+    const credentials = getOAuthCredentials();
     const params = new URLSearchParams({
         refresh_token: refreshToken,
-        client_id: OAUTH_CONFIG.clientId,
-        client_secret: OAUTH_CONFIG.clientSecret,
+        client_id: credentials.clientId,
+        client_secret: credentials.clientSecret,
         grant_type: 'refresh_token'
     });
     const response = await fetch(OAUTH_CONFIG.tokenUrl, {
@@ -455,11 +477,11 @@ export async function refreshAccessToken(refreshToken) {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: params.toString()
+        body: params.toString(),
+        signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
     });
     if (!response.ok) {
-        const error = await response.text();
-        debug('oauth', 'Token refresh failed', error);
+        debug('oauth', `Token refresh failed: ${response.status}`);
         throw new Error(`Token refresh failed: ${response.status}`);
     }
     const data = await response.json();

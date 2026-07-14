@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  exec: vi.fn()
+  execFile: vi.fn()
 }));
 
 vi.mock('child_process', () => ({
-  exec: mocks.exec
+  execFile: mocks.execFile
 }));
 
 import { detectAntigravityProcess } from '../src/antigravity/local/process-detector.js';
@@ -16,7 +16,7 @@ describe('detectAntigravityProcess', () => {
   });
 
   it('parses unix ps output and extracts pid/token/port', async () => {
-    mocks.exec.mockImplementation((command: string, callback: (error: Error | null, result: { stdout: string; stderr: string }) => void) => {
+    mocks.execFile.mockImplementation((command: string, args: string[], options: unknown, callback: (error: Error | null, result: { stdout: string; stderr: string }) => void) => {
       callback(null, {
         stdout:
           'user 123 0.0 0.0 0 0 ? S 00:00 0:00 /opt/antigravity language-server --csrf_token=abc --extension_server_port 4312\n',
@@ -30,8 +30,10 @@ describe('detectAntigravityProcess', () => {
       expect.objectContaining({
         pid: 123,
         csrfToken: 'abc',
-        extensionServerPort: 4312
+        extensionServerPort: 4312,
+        commandLine: expect.stringContaining('--csrf_token=[REDACTED]')
       })
     );
+    expect(result?.commandLine).not.toContain('--csrf_token=abc');
   });
 });

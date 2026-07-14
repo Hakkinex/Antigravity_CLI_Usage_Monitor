@@ -6,6 +6,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { getGlobalConfigPath, getConfigDir } from '../core/env.js'
 import { debug } from '../core/logger.js'
+import { setPrivateDirectoryPermissions, setPrivateFilePermissions } from '../core/permissions.js'
 import { DEFAULT_CONFIG, type GlobalConfig } from './types.js'
 
 /**
@@ -20,6 +21,7 @@ export function loadConfig(): GlobalConfig {
   }
   
   try {
+    setPrivateFilePermissions(path)
     const content = readFileSync(path, 'utf-8')
     const config = JSON.parse(content) as Partial<GlobalConfig>
     
@@ -47,11 +49,13 @@ export function saveConfig(config: GlobalConfig): void {
   
   // Ensure directory exists
   if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
   }
+  setPrivateDirectoryPermissions(dir)
   
   debug('config', `Saving config to ${path}`)
-  writeFileSync(path, JSON.stringify(config, null, 2))
+  writeFileSync(path, JSON.stringify(config, null, 2), { mode: 0o600 })
+  setPrivateFilePermissions(path)
 }
 
 /**

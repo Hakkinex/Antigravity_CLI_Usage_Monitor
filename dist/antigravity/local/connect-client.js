@@ -9,9 +9,16 @@ export class ConnectClient {
     csrfToken;
     isHttps;
     constructor(baseUrl, csrfToken) {
-        this.baseUrl = baseUrl;
+        const parsedBaseUrl = new URL(baseUrl);
+        if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsedBaseUrl.hostname)) {
+            throw new Error('Connect API must use a loopback address');
+        }
+        if (parsedBaseUrl.protocol !== 'http:' && parsedBaseUrl.protocol !== 'https:') {
+            throw new Error('Connect API must use HTTP or HTTPS');
+        }
+        this.baseUrl = parsedBaseUrl.origin;
         this.csrfToken = csrfToken;
-        this.isHttps = baseUrl.startsWith('https://');
+        this.isHttps = parsedBaseUrl.protocol === 'https:';
         debug('connect-client', `Initialized with baseUrl: ${baseUrl}, hasToken: ${!!csrfToken}`);
     }
     /**
@@ -86,7 +93,7 @@ export class ConnectClient {
                         reject(new Error(`Endpoint not found: ${path}`));
                     }
                     else {
-                        reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+                        reject(new Error(`HTTP ${res.statusCode}: ${sanitizeErrorBody(data)}`));
                     }
                 });
             });
@@ -107,7 +114,7 @@ export class ConnectClient {
      * Parse raw API response into ConnectUserStatus
      */
     parseUserStatus(response) {
-        debug('connect-client', 'Raw response:', JSON.stringify(response, null, 2));
+        debug('connect-client', 'Received user status response');
         const status = {
             raw: response
         };
@@ -204,5 +211,9 @@ export class ConnectClient {
             return undefined;
         }
     }
+}
+function sanitizeErrorBody(data) {
+    const normalized = data.replace(/[\r\n\t]+/g, ' ').trim();
+    return normalized.length > 200 ? `${normalized.slice(0, 200)}...` : normalized;
 }
 //# sourceMappingURL=connect-client.js.map

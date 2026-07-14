@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { getGlobalConfigPath } from '../core/env.js';
 import { debug } from '../core/logger.js';
+import { setPrivateDirectoryPermissions, setPrivateFilePermissions } from '../core/permissions.js';
 import { DEFAULT_CONFIG } from './types.js';
 /**
  * Load global config from disk
@@ -16,6 +17,7 @@ export function loadConfig() {
         return { ...DEFAULT_CONFIG };
     }
     try {
+        setPrivateFilePermissions(path);
         const content = readFileSync(path, 'utf-8');
         const config = JSON.parse(content);
         // Merge with defaults to ensure all fields exist
@@ -41,10 +43,12 @@ export function saveConfig(config) {
     const dir = dirname(path);
     // Ensure directory exists
     if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
+    setPrivateDirectoryPermissions(dir);
     debug('config', `Saving config to ${path}`);
-    writeFileSync(path, JSON.stringify(config, null, 2));
+    writeFileSync(path, JSON.stringify(config, null, 2), { mode: 0o600 });
+    setPrivateFilePermissions(path);
 }
 /**
  * Get the active account email

@@ -37,7 +37,9 @@ function getBinDirectories(): string[] {
     // Get npm global bin directory
     const npmBin = execSync('npm bin -g', {
       encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
+      maxBuffer: 1024 * 1024
     }).trim()
     if (npmBin) {
       dirs.add(npmBin)
@@ -78,7 +80,7 @@ function getBinDirectories(): string[] {
  */
 async function loadCrontab(): Promise<string[]> {
   try {
-    const { stdout } = await execAsync('crontab -l 2>/dev/null || echo ""')
+    const { stdout } = await execAsync('crontab -l 2>/dev/null || echo ""', { maxBuffer: 1024 * 1024 })
     const lines = stdout.split('\n').filter(line => line.trim())
     debug('cron-installer', `Loaded ${lines.length} crontab entries`)
     return lines

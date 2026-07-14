@@ -70,12 +70,16 @@ No separate `antigravity-usage` install is required.
 
 ## Login Setup
 
-Google OAuth login works without extra setup. If you need to override the built-in credentials, set:
+Configure a Google OAuth installed-application credential before using login or refreshing an expired access token:
 
 ```bash
 export ANTIGRAVITY_OAUTH_CLIENT_ID=your-client-id
 export ANTIGRAVITY_OAUTH_CLIENT_SECRET=your-client-secret
 ```
+
+Do not commit these values to the repository or store them in shell history. Rotate any credential that has previously been published.
+
+Refresh tokens are bound to the OAuth client that issued them. After rotating credentials, sign in again so each account receives a refresh token for the new client.
 
 Then run:
 

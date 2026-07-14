@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { defaultConfig } from './defaultConfig.js';
 import type { MonitorConfig } from '../types.js';
+import { setPrivateFilePermissions } from '../antigravity/core/permissions.js';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -21,6 +22,7 @@ export function loadConfig(path = getConfigPath()): MonitorConfig {
   }
 
   try {
+    setPrivateFilePermissions(path);
     const parsed = JSON.parse(readFileSync(path, 'utf8'));
     const safeConfig = stripUndefined(normalizeConfig(parsed));
 

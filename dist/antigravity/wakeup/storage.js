@@ -6,6 +6,7 @@ import { join } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { debug } from '../core/logger.js';
 import { getConfigDir } from '../core/env.js';
+import { setPrivateDirectoryPermissions, setPrivateFilePermissions } from '../core/permissions.js';
 import { getDefaultConfig } from './types.js';
 // Storage paths
 const WAKEUP_DIR_NAME = 'wakeup';
@@ -27,9 +28,10 @@ function getWakeupDir() {
 function ensureWakeupDir() {
     const dir = getWakeupDir();
     if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
         debug('wakeup-storage', `Created wakeup directory: ${dir}`);
     }
+    setPrivateDirectoryPermissions(dir);
 }
 /**
  * Generic JSON file reader
@@ -38,6 +40,7 @@ function readJsonFile(filename, defaultValue) {
     const filepath = join(getWakeupDir(), filename);
     try {
         if (existsSync(filepath)) {
+            setPrivateFilePermissions(filepath);
             const content = readFileSync(filepath, 'utf-8');
             return JSON.parse(content);
         }
@@ -54,7 +57,8 @@ function writeJsonFile(filename, data) {
     ensureWakeupDir();
     const filepath = join(getWakeupDir(), filename);
     try {
-        writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf-8');
+        writeFileSync(filepath, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
+        setPrivateFilePermissions(filepath);
         debug('wakeup-storage', `Wrote ${filename}`);
     }
     catch (err) {

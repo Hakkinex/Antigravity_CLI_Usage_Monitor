@@ -2,9 +2,10 @@
  * Account storage - file-based operations for multi-account
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { getAccountsDir, getAccountDir } from '../core/env.js';
 import { debug } from '../core/logger.js';
+import { setPrivateDirectoryPermissions, setPrivateFilePermissions } from '../core/permissions.js';
 /**
  * Ensure accounts directory exists
  */
@@ -12,8 +13,9 @@ export function ensureAccountsDir() {
     const dir = getAccountsDir();
     if (!existsSync(dir)) {
         debug('accounts-storage', `Creating accounts directory: ${dir}`);
-        mkdirSync(dir, { recursive: true });
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
+    setPrivateDirectoryPermissions(dir);
 }
 /**
  * Ensure specific account directory exists
@@ -23,8 +25,9 @@ export function ensureAccountDir(email) {
     const dir = getAccountDir(email);
     if (!existsSync(dir)) {
         debug('accounts-storage', `Creating account directory: ${dir}`);
-        mkdirSync(dir, { recursive: true });
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
+    setPrivateDirectoryPermissions(dir);
 }
 /**
  * Check if an account exists
@@ -71,6 +74,7 @@ export function saveAccountTokens(email, tokens) {
     const path = join(getAccountDir(email), 'tokens.json');
     debug('accounts-storage', `Saving tokens for ${email}`);
     writeFileSync(path, JSON.stringify(tokens, null, 2), { mode: 0o600 });
+    setPrivateFilePermissions(path);
 }
 /**
  * Load tokens for an account
@@ -82,6 +86,7 @@ export function loadAccountTokens(email) {
         return null;
     }
     try {
+        setPrivateFilePermissions(path);
         const content = readFileSync(path, 'utf-8');
         return JSON.parse(content);
     }
@@ -101,6 +106,7 @@ export function saveAccountMetadata(email, metadata) {
     const path = join(getAccountDir(email), 'metadata.json');
     debug('accounts-storage', `Saving metadata for ${email}`);
     writeFileSync(path, JSON.stringify(metadata, null, 2), { mode: 0o600 });
+    setPrivateFilePermissions(path);
 }
 /**
  * Load metadata for an account
@@ -111,6 +117,7 @@ export function loadAccountMetadata(email) {
         return null;
     }
     try {
+        setPrivateFilePermissions(path);
         const content = readFileSync(path, 'utf-8');
         return JSON.parse(content);
     }
@@ -139,7 +146,8 @@ export function saveAccountCache(email, cache) {
     ensureAccountDir(email);
     const path = join(getAccountDir(email), 'cache.json');
     debug('accounts-storage', `Saving cache for ${email}`);
-    writeFileSync(path, JSON.stringify(cache, null, 2));
+    writeFileSync(path, JSON.stringify(cache, null, 2), { mode: 0o600 });
+    setPrivateFilePermissions(path);
 }
 /**
  * Load cached quota for an account
@@ -150,6 +158,7 @@ export function loadAccountCache(email) {
         return null;
     }
     try {
+        setPrivateFilePermissions(path);
         const content = readFileSync(path, 'utf-8');
         return JSON.parse(content);
     }
@@ -181,6 +190,10 @@ export function deleteAccountCache(email) {
  */
 export function deleteAccount(email) {
     const dir = getAccountDir(email);
+    const relativePath = relative(getAccountsDir(), dir);
+    if (!relativePath || relativePath.startsWith('..')) {
+        throw new Error('Refusing to delete a path outside the accounts directory');
+    }
     if (!existsSync(dir)) {
         debug('accounts-storage', `Account ${email} does not exist`);
         return false;

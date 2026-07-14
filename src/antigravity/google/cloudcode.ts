@@ -29,6 +29,9 @@ const METADATA = {
   pluginType: 'GEMINI'
 }
 
+const API_REQUEST_TIMEOUT_MS = 30_000
+const STREAM_REQUEST_TIMEOUT_MS = 60_000
+
 /**
  * Raw API response types (based on extension code patterns)
  */
@@ -106,14 +109,15 @@ export class CloudCodeClient {
           'Content-Type': 'application/json',
           'User-Agent': USER_AGENT
         },
-        body: body ? JSON.stringify(body) : undefined
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(API_REQUEST_TIMEOUT_MS)
       })
       
       debug('cloudcode', `Response status: ${response.status}`)
       
       if (response.status === 401 || response.status === 403) {
-        const errorBody = await response.text()
-        debug('cloudcode', `Auth error body: ${errorBody}`)
+        await response.body?.cancel()
+        debug('cloudcode', `Authentication failed with status ${response.status}`)
         throw new AuthenticationError('Authentication failed. Configure Antigravity auth before watching real quota.')
       }
       
@@ -128,8 +132,8 @@ export class CloudCodeClient {
       }
       
       if (!response.ok) {
-        const errorText = await response.text()
-        debug('cloudcode', 'API error response', errorText)
+        await response.body?.cancel()
+        debug('cloudcode', `API request failed with status ${response.status}`)
         throw new APIError(`API request failed: ${response.status}`, response.status)
       }
       
@@ -358,7 +362,7 @@ export class CloudCodeClient {
       debug('cloudcode', 'Sending request WITHOUT project ID')
     }
     
-    debug('cloudcode', `Request body:`, JSON.stringify(body, null, 2))
+    debug('cloudcode', `Request metadata: model=${modelId}, hasProject=${Boolean(this.projectId)}`)
     
     // Get fresh access token
     const token = await this.tokenManager.getValidAccessToken()
@@ -429,12 +433,12 @@ export class CloudCodeClient {
               'Content-Type': 'application/json',
               'Accept-Encoding': 'gzip'  // CRITICAL: Must match example.ts
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(STREAM_REQUEST_TIMEOUT_MS)
           })
           
           const text = await response.text()
           debug('cloudcode', `Response ${response.status}`)
-          debug('cloudcode', `Response text: ${text.slice(0, 500)}`)
           
           // Handle retryable errors (429 or 5xx) - matching example.ts
           if (response.status === 429 || response.status >= 500) {
@@ -456,7 +460,7 @@ export class CloudCodeClient {
           
           // Non-retryable error (4xx except 429)
           debug('cloudcode', `Non-retryable error: ${response.status}`)
-          throw new Error(`API request failed: ${response.status} - ${text}`)
+          throw new Error(`API request failed: ${response.status}`)
           
         } catch (err) {
           // Network or other error

@@ -184,7 +184,7 @@ Login options:
   --no-browser       Print the OAuth URL instead of opening a browser
   --manual           Use the manual copy/paste OAuth flow
   --port <port>      Port for the OAuth callback server
-  ANTIGRAVITY_OAUTH_CLIENT_ID / ANTIGRAVITY_OAUTH_CLIENT_SECRET override built-in credentials
+  ANTIGRAVITY_OAUTH_CLIENT_ID / ANTIGRAVITY_OAUTH_CLIENT_SECRET are required for login and token refresh
 
 Status options:
   --all              Show status for all accounts

@@ -68,14 +68,18 @@ npm link
 
 ## 使用方式
 
-## Login Setup
+## 登入設定
 
-Google OAuth login 預設不需要額外設定。如果你要覆蓋內建 credential，可以先設定：
+使用登入功能或更新已過期的 access token 前，請先設定 Google OAuth 已安裝應用程式憑證：
 
 ```bash
 export ANTIGRAVITY_OAUTH_CLIENT_ID=your-client-id
 export ANTIGRAVITY_OAUTH_CLIENT_SECRET=your-client-secret
 ```
+
+請勿將這些值提交到 repository 或留在 shell history 中。任何曾公開發布過的憑證都應立即輪替。
+
+Refresh token 會綁定簽發它的 OAuth client。輪替憑證後，請重新登入各帳號，取得屬於新 client 的 refresh token。
 
 接著執行：
 

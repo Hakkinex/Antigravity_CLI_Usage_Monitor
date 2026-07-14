@@ -2,11 +2,12 @@
  * Port detective - discovers listening ports for a given process
  */
 
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { debug } from '../core/logger.js'
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
+const MAX_COMMAND_OUTPUT = 5 * 1024 * 1024
 
 /**
  * Discovers which ports a process is listening on
@@ -14,6 +15,10 @@ const execAsync = promisify(exec)
  * @returns Array of port numbers the process is listening on
  */
 export async function discoverPorts(pid: number): Promise<number[]> {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    throw new Error('PID must be a positive integer')
+  }
+
   const platform = process.platform
   
   debug('port-detective', `Discovering ports for PID ${pid} on platform: ${platform}`)
@@ -33,7 +38,9 @@ export async function discoverPorts(pid: number): Promise<number[]> {
 async function discoverPortsOnMacOS(pid: number): Promise<number[]> {
   try {
     // lsof -nP -iTCP -sTCP:LISTEN -a -p <PID>
-    const { stdout } = await execAsync(`lsof -nP -iTCP -sTCP:LISTEN -a -p ${pid}`)
+    const { stdout } = await execFileAsync('lsof', ['-nP', '-iTCP', '-sTCP:LISTEN', '-a', '-p', String(pid)], {
+      maxBuffer: MAX_COMMAND_OUTPUT
+    })
     
     const ports: number[] = []
     const lines = stdout.split('\n')
@@ -64,12 +71,13 @@ async function discoverPortsOnMacOS(pid: number): Promise<number[]> {
 async function discoverPortsOnLinux(pid: number): Promise<number[]> {
   try {
     // Try ss first (modern)
-    const { stdout } = await execAsync(`ss -tlnp | grep "pid=${pid},"`)
+    const { stdout } = await execFileAsync('ss', ['-tlnp'], { maxBuffer: MAX_COMMAND_OUTPUT })
     
     const ports: number[] = []
     const lines = stdout.split('\n')
     
     for (const line of lines) {
+      if (!line.includes(`pid=${pid},`)) continue
       // Format: State Recv-Q Send-Q Local Address:Port Peer Address:Port Process
       const match = line.match(/:(\d+)\s/)
       if (match) {
@@ -98,12 +106,13 @@ async function discoverPortsOnLinux(pid: number): Promise<number[]> {
  */
 async function discoverPortsOnLinuxNetstat(pid: number): Promise<number[]> {
   try {
-    const { stdout } = await execAsync(`netstat -tlnp 2>/dev/null | grep "${pid}/"`)
+    const { stdout } = await execFileAsync('netstat', ['-tlnp'], { maxBuffer: MAX_COMMAND_OUTPUT })
     
     const ports: number[] = []
     const lines = stdout.split('\n')
     
     for (const line of lines) {
+      if (!line.includes(`${pid}/`)) continue
       // Format: Proto Recv-Q Send-Q Local Address Foreign Address State PID/Program
       const match = line.match(/:(\d+)\s/)
       if (match) {
@@ -128,7 +137,7 @@ async function discoverPortsOnLinuxNetstat(pid: number): Promise<number[]> {
 async function discoverPortsOnWindows(pid: number): Promise<number[]> {
   try {
     // netstat -ano shows all connections with PIDs
-    const { stdout } = await execAsync('netstat -ano')
+    const { stdout } = await execFileAsync('netstat', ['-ano'], { maxBuffer: MAX_COMMAND_OUTPUT })
     
     const ports: number[] = []
     const lines = stdout.split('\n')

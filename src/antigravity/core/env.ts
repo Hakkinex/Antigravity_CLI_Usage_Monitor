@@ -1,6 +1,7 @@
-import { existsSync, cpSync } from 'node:fs';
+import { existsSync, cpSync, mkdirSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
+import { setPrivateDirectoryPermissions } from './permissions.js';
 
 export type Platform = 'windows' | 'macos' | 'linux';
 
@@ -27,7 +28,13 @@ function appConfigDir(appName: string): string {
 }
 
 export function getConfigDir(): string {
-  return appConfigDir('agy-monitor');
+  const dir = appConfigDir('agy-monitor');
+  ensureLegacyConfigImported();
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+  }
+  setPrivateDirectoryPermissions(dir);
+  return dir;
 }
 
 export function getLegacyConfigDir(): string {
@@ -35,28 +42,28 @@ export function getLegacyConfigDir(): string {
 }
 
 export function ensureLegacyConfigImported(): void {
-  const target = getConfigDir();
+  const target = appConfigDir('agy-monitor');
   const legacy = getLegacyConfigDir();
   if (existsSync(target) || !existsSync(legacy)) return;
   cpSync(legacy, target, { recursive: true, errorOnExist: false });
 }
 
 export function getTokensPath(): string {
-  ensureLegacyConfigImported();
   return join(getConfigDir(), 'tokens.json');
 }
 
 export function getAccountsDir(): string {
-  ensureLegacyConfigImported();
   return join(getConfigDir(), 'accounts');
 }
 
 export function getAccountDir(email: string): string {
+  if (!email || email === '.' || email === '..' || email.includes('/') || email.includes('\\') || email.includes('\0')) {
+    throw new Error('Invalid account email for storage path')
+  }
   const safeName = email.replace(/[^a-zA-Z0-9@._-]/g, '_');
   return join(getAccountsDir(), safeName);
 }
 
 export function getGlobalConfigPath(): string {
-  ensureLegacyConfigImported();
   return join(getConfigDir(), 'config.json');
 }

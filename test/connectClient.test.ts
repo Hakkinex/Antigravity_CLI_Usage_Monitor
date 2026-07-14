@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { ConnectClient } from '../src/antigravity/local/connect-client.js';
 
 describe('ConnectClient parsing', () => {
+  it('rejects non-loopback Connect API URLs', () => {
+    expect(() => new ConnectClient('https://example.com:443')).toThrow('loopback');
+  });
+
+  it('accepts IPv4, localhost, and IPv6 loopback URLs', () => {
+    expect(() => new ConnectClient('https://127.0.0.1:443')).not.toThrow();
+    expect(() => new ConnectClient('http://localhost:8080')).not.toThrow();
+    expect(() => new ConnectClient('https://[::1]:443')).not.toThrow();
+  });
+
   it('extracts nested user status and quota data', () => {
     const client = new ConnectClient('https://127.0.0.1:1');
     const status = (client as any).parseUserStatus({

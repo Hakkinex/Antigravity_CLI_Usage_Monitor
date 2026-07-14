@@ -3,6 +3,7 @@
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { randomBytes } from 'node:crypto'
 import { URL, URLSearchParams } from 'node:url'
 import open from 'open'
 import inquirer from 'inquirer'
@@ -12,14 +13,27 @@ import type { OAuthTokenResponse, StoredTokens } from '../quota/types.js'
 
 // OAuth configuration
 const OAUTH_CONFIG = {
-  clientId: process.env.ANTIGRAVITY_OAUTH_CLIENT_ID || 'REMOVED_OAUTH_CLIENT_ID',
-  clientSecret: process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET || 'REMOVED_OAUTH_CLIENT_SECRET',
   authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
   tokenUrl: 'https://oauth2.googleapis.com/token',
   scopes: [
     'https://www.googleapis.com/auth/cloud-platform',
     'https://www.googleapis.com/auth/userinfo.email'
   ]
+}
+
+const GOOGLE_REQUEST_TIMEOUT_MS = 30_000
+
+function getOAuthCredentials(): { clientId: string; clientSecret: string } {
+  const clientId = process.env.ANTIGRAVITY_OAUTH_CLIENT_ID
+  const clientSecret = process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET
+
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      'Google OAuth credentials are not configured. Set ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET.'
+    )
+  }
+
+  return { clientId, clientSecret }
 }
 
 // Cloud Code API configuration
@@ -73,7 +87,16 @@ interface ProjectIdResult {
  * Generate a random state parameter for CSRF protection
  */
 function generateState(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  return randomBytes(32).toString('hex')
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
 }
 
 /**
@@ -100,11 +123,12 @@ async function getAvailablePort(preferredPort?: number): Promise<number> {
  */
 async function exchangeCodeForTokens(code: string, redirectUri: string): Promise<OAuthTokenResponse> {
   debug('oauth', 'Exchanging code for tokens')
+  const credentials = getOAuthCredentials()
   
   const params = new URLSearchParams({
     code,
-    client_id: OAUTH_CONFIG.clientId,
-    client_secret: OAUTH_CONFIG.clientSecret,
+    client_id: credentials.clientId,
+    client_secret: credentials.clientSecret,
     redirect_uri: redirectUri,
     grant_type: 'authorization_code'
   })
@@ -114,13 +138,13 @@ async function exchangeCodeForTokens(code: string, redirectUri: string): Promise
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body: params.toString()
+    body: params.toString(),
+    signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
   })
   
   if (!response.ok) {
-    const error = await response.text()
-    debug('oauth', 'Token exchange failed', error)
-    throw new Error(`Token exchange failed: ${response.status} ${error}`)
+    debug('oauth', `Token exchange failed: ${response.status}`)
+    throw new Error(`Token exchange failed: ${response.status}`)
   }
   
   const data = await response.json() as OAuthTokenResponse
@@ -138,7 +162,8 @@ async function getUserEmail(accessToken: string): Promise<string | undefined> {
     const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
         Authorization: `Bearer ${accessToken}`
-      }
+      },
+      signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
     })
     
     if (response.ok) {
@@ -236,7 +261,8 @@ async function tryOnboardUser(accessToken: string, tierId: string): Promise<stri
           'Content-Type': 'application/json',
           'User-Agent': CLOUDCODE_CONFIG.userAgent
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
       })
       
       if (!response.ok) {
@@ -291,7 +317,8 @@ export async function resolveProjectId(accessToken: string): Promise<ProjectIdRe
         'Content-Type': 'application/json',
         'User-Agent': CLOUDCODE_CONFIG.userAgent
       },
-      body: JSON.stringify({ metadata: CLOUDCODE_CONFIG.metadata })
+      body: JSON.stringify({ metadata: CLOUDCODE_CONFIG.metadata }),
+      signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
     })
     
     if (!response.ok) {
@@ -380,6 +407,7 @@ async function completeLogin(code: string, redirectUri: string): Promise<OAuthRe
  * Start OAuth login flow
  */
 export async function startOAuthFlow(options: OAuthOptions = {}): Promise<OAuthResult> {
+  const credentials = getOAuthCredentials()
   const port = await getAvailablePort(options.port)
   const redirectUri = `http://127.0.0.1:${port}/callback`
   const state = generateState()
@@ -388,7 +416,7 @@ export async function startOAuthFlow(options: OAuthOptions = {}): Promise<OAuthR
   
   // Build authorization URL
   const authParams = new URLSearchParams({
-    client_id: OAUTH_CONFIG.clientId,
+    client_id: credentials.clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: OAUTH_CONFIG.scopes.join(' '),
@@ -483,7 +511,7 @@ export async function startOAuthFlow(options: OAuthOptions = {}): Promise<OAuthR
             <html>
               <body style="font-family: system-ui; padding: 40px; text-align: center;">
                 <h1>Login Successful!</h1>
-                <p>You are now logged in${result.email ? ` as <strong>${result.email}</strong>` : ''}.</p>
+                <p>You are now logged in${result.email ? ` as <strong>${escapeHtml(result.email)}</strong>` : ''}.</p>
                 <p>You can close this window and return to the terminal.</p>
               </body>
             </html>
@@ -542,11 +570,12 @@ export async function startOAuthFlow(options: OAuthOptions = {}): Promise<OAuthR
  */
 export async function refreshAccessToken(refreshToken: string): Promise<OAuthTokenResponse> {
   debug('oauth', 'Refreshing access token')
+  const credentials = getOAuthCredentials()
   
   const params = new URLSearchParams({
     refresh_token: refreshToken,
-    client_id: OAUTH_CONFIG.clientId,
-    client_secret: OAUTH_CONFIG.clientSecret,
+    client_id: credentials.clientId,
+    client_secret: credentials.clientSecret,
     grant_type: 'refresh_token'
   })
   
@@ -555,12 +584,12 @@ export async function refreshAccessToken(refreshToken: string): Promise<OAuthTok
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body: params.toString()
+    body: params.toString(),
+    signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)
   })
   
   if (!response.ok) {
-    const error = await response.text()
-    debug('oauth', 'Token refresh failed', error)
+    debug('oauth', `Token refresh failed: ${response.status}`)
     throw new Error(`Token refresh failed: ${response.status}`)
   }
   
