@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Restored the public built-in Desktop OAuth client intentionally provided by the upstream `antigravity-usage` project, while preserving paired environment-variable overrides.
+- Changed `watch` to request fresh upstream quota on startup and every scheduled refresh instead of reusing the five-minute cache between polls.
+- Added provider-aware stale-cache fallback warnings with the original refresh error and cache age.
+- Added regression coverage for scheduled fresh polling, OAuth fallback/override behavior, and stale-cache diagnostics.
+
 ## 1.2.0
 
 - Removed embedded Google OAuth credentials and now require `ANTIGRAVITY_OAUTH_CLIENT_ID` and `ANTIGRAVITY_OAUTH_CLIENT_SECRET` for login and token refresh.

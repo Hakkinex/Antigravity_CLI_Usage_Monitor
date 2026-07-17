@@ -9,6 +9,8 @@ import inquirer from 'inquirer';
 import { debug, info } from '../core/logger.js';
 import { getAccountManager } from '../accounts/index.js';
 // OAuth configuration
+const BUILT_IN_OAUTH_CLIENT_ID = '1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com';
+const BUILT_IN_OAUTH_CLIENT_SECRET = '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';
 const OAUTH_CONFIG = {
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
@@ -21,10 +23,13 @@ const GOOGLE_REQUEST_TIMEOUT_MS = 30_000;
 function getOAuthCredentials() {
     const clientId = process.env.ANTIGRAVITY_OAUTH_CLIENT_ID;
     const clientSecret = process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET;
-    if (!clientId || !clientSecret) {
-        throw new Error('Google OAuth credentials are not configured. Set ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET.');
+    if (Boolean(clientId) !== Boolean(clientSecret)) {
+        throw new Error('Custom Google OAuth credentials are incomplete. Set both ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET, or unset both to use the built-in upstream credentials.');
     }
-    return { clientId, clientSecret };
+    return {
+        clientId: clientId || BUILT_IN_OAUTH_CLIENT_ID,
+        clientSecret: clientSecret || BUILT_IN_OAUTH_CLIENT_SECRET
+    };
 }
 // Cloud Code API configuration
 const CLOUDCODE_CONFIG = {

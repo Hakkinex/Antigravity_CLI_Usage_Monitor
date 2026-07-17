@@ -8,7 +8,7 @@ Portions of `src/antigravity/` are derived from:
 - Upstream commit: `1b6dc0bb8d59b899a7601a25c8e2d921008823df 0.2.9`
 - Original license: MIT
 
-The derived code has been modified for `agy-monitor`, including quota window normalization for Google `quotaInfos[]` data and weekly quota parsing support.
+The derived code has been modified for `agy-monitor`, including quota window normalization, cache/source diagnostics, and security hardening. The Google Desktop OAuth Client ID and Client Secret fallback are intentionally shared by the upstream project in `src/google/oauth.ts`; `agy-monitor` keeps environment-variable overrides for custom clients.
 
 ## License Text
 

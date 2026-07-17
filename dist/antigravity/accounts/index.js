@@ -8,7 +8,7 @@ export { ensureAccountsDir, ensureAccountDir, accountExists, listAccountEmails, 
 // Config operations 
 export { loadConfig, saveConfig, getActiveAccountEmail, setActiveAccountEmail, getCacheTTL } from './config.js';
 // Cache operations
-export { isCacheValid, getCacheAge, saveCache, loadCache, loadCacheWithMeta, invalidateCache } from './cache.js';
+export { isCacheValid, getCacheAge, saveCache, loadCache, loadMatchingCache, loadCacheWithMeta, invalidateCache } from './cache.js';
 // Manager
 export { AccountManager, getAccountManager } from './manager.js';
 //# sourceMappingURL=index.js.map

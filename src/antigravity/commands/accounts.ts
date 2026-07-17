@@ -48,7 +48,7 @@ export async function addAccountCommand(): Promise<void> {
     logError(`Failed to add account: ${message}`)
     if (message.includes('ANTIGRAVITY_OAUTH_CLIENT_ID') || message.includes('ANTIGRAVITY_OAUTH_CLIENT_SECRET')) {
       info('')
-      info('Set `ANTIGRAVITY_OAUTH_CLIENT_ID` and `ANTIGRAVITY_OAUTH_CLIENT_SECRET`, then add the account again.')
+      info('Set both OAuth environment variables, or unset both to use the built-in upstream credentials.')
     }
     process.exit(1)
   }

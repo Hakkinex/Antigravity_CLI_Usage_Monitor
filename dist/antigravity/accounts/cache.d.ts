@@ -23,6 +23,7 @@ export declare function saveCache(email: string, data: QuotaSnapshot): void;
  * Load cached quota data
  */
 export declare function loadCache(email: string): QuotaSnapshot | null;
+export declare function loadMatchingCache(email: string, expectation?: CacheExpectation): QuotaSnapshot | null;
 /**
  * Load cache with metadata
  */

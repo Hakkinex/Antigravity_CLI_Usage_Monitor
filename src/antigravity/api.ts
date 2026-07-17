@@ -1,4 +1,4 @@
-import { getAccountManager, saveCache, isCacheValid, loadCache, getCacheAge } from './accounts/index.js';
+import { getAccountManager, saveCache, isCacheValid, loadCache, loadMatchingCache, getCacheAge } from './accounts/index.js';
 import { fetchQuota, type QuotaMethod } from './quota/service.js';
 import { resetTokenManager } from './google/token-manager.js';
 import type { QuotaSnapshot } from './quota/types.js';
@@ -7,7 +7,7 @@ export type { ModelQuotaInfo, QuotaMethod, QuotaSnapshot, QuotaWindow } from './
 
 export type AccountQuotaResult =
   | { email: string; isActive: boolean; status: 'success'; snapshot: QuotaSnapshot }
-  | { email: string; isActive: boolean; status: 'cached'; snapshot: QuotaSnapshot; cacheAge: number }
+  | { email: string; isActive: boolean; status: 'cached'; snapshot: QuotaSnapshot; cacheAge: number; fallbackError?: string }
   | { email: string; isActive: boolean; status: 'error'; error: string };
 
 export type FetchQuotaOptions = {
@@ -79,9 +79,16 @@ export async function fetchAllQuotaSnapshots(options: FetchQuotaOptions = {}): P
       saveCache(email, snapshot);
       results.push({ email, isActive, status: 'success', snapshot });
     } catch (error) {
-      const cached = loadCache(email);
+      const cached = loadMatchingCache(email, { method, source: expectedSourceForMethod(method) });
       if (cached) {
-        results.push({ email, isActive, status: 'cached', snapshot: cached, cacheAge: getCacheAge(email) ?? 0 });
+        results.push({
+          email,
+          isActive,
+          status: 'cached',
+          snapshot: cached,
+          cacheAge: getCacheAge(email) ?? 0,
+          fallbackError: error instanceof Error ? error.message : String(error)
+        });
       } else {
         results.push({
           email,
@@ -123,9 +130,16 @@ async function fetchLocalQuotaSnapshots(
     return [{ email, isActive, status: 'success', snapshot }];
   } catch (error) {
     const email = requestedEmail ?? activeEmail ?? 'local';
-    const cached = isCacheValid(email, { method: 'local', source: 'local' }) ? loadCache(email) : null;
+    const cached = loadMatchingCache(email, { method: 'local', source: 'local' });
     if (cached) {
-      return [{ email, isActive: email === activeEmail, status: 'cached', snapshot: cached, cacheAge: getCacheAge(email) ?? 0 }];
+      return [{
+        email,
+        isActive: email === activeEmail,
+        status: 'cached',
+        snapshot: cached,
+        cacheAge: getCacheAge(email) ?? 0,
+        fallbackError: error instanceof Error ? error.message : String(error)
+      }];
     }
 
     return [

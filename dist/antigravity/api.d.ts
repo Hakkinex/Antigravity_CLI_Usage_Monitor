@@ -12,6 +12,7 @@ export type AccountQuotaResult = {
     status: 'cached';
     snapshot: QuotaSnapshot;
     cacheAge: number;
+    fallbackError?: string;
 } | {
     email: string;
     isActive: boolean;

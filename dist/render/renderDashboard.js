@@ -11,6 +11,10 @@ export function renderDashboard(state, options) {
         lines.push(dim(`Command: ${state.command}`));
     }
     lines.push('');
+    if (state.lastError && state.snapshot) {
+        lines.push(color(`Warning: ${state.lastError}`, 203));
+        lines.push('');
+    }
     if (state.snapshot && state.snapshot.accounts.length > 0) {
         lines.push(layoutCards(state.snapshot.accounts.map((account) => renderAccountCard(account, options)), options.columns, terminalWidth));
     }

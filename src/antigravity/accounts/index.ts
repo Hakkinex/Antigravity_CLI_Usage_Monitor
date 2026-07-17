@@ -37,6 +37,7 @@ export {
   getCacheAge,
   saveCache,
   loadCache,
+  loadMatchingCache,
   loadCacheWithMeta,
   invalidateCache
 } from './cache.js'

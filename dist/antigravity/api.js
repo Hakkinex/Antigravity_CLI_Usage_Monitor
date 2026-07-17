@@ -1,4 +1,4 @@
-import { getAccountManager, saveCache, isCacheValid, loadCache, getCacheAge } from './accounts/index.js';
+import { getAccountManager, saveCache, isCacheValid, loadCache, loadMatchingCache, getCacheAge } from './accounts/index.js';
 import { fetchQuota } from './quota/service.js';
 import { resetTokenManager } from './google/token-manager.js';
 function expectedSourceForMethod(method) {
@@ -60,9 +60,16 @@ export async function fetchAllQuotaSnapshots(options = {}) {
             results.push({ email, isActive, status: 'success', snapshot });
         }
         catch (error) {
-            const cached = loadCache(email);
+            const cached = loadMatchingCache(email, { method, source: expectedSourceForMethod(method) });
             if (cached) {
-                results.push({ email, isActive, status: 'cached', snapshot: cached, cacheAge: getCacheAge(email) ?? 0 });
+                results.push({
+                    email,
+                    isActive,
+                    status: 'cached',
+                    snapshot: cached,
+                    cacheAge: getCacheAge(email) ?? 0,
+                    fallbackError: error instanceof Error ? error.message : String(error)
+                });
             }
             else {
                 results.push({
@@ -97,9 +104,16 @@ async function fetchLocalQuotaSnapshots(options, activeEmail) {
     }
     catch (error) {
         const email = requestedEmail ?? activeEmail ?? 'local';
-        const cached = isCacheValid(email, { method: 'local', source: 'local' }) ? loadCache(email) : null;
+        const cached = loadMatchingCache(email, { method: 'local', source: 'local' });
         if (cached) {
-            return [{ email, isActive: email === activeEmail, status: 'cached', snapshot: cached, cacheAge: getCacheAge(email) ?? 0 }];
+            return [{
+                    email,
+                    isActive: email === activeEmail,
+                    status: 'cached',
+                    snapshot: cached,
+                    cacheAge: getCacheAge(email) ?? 0,
+                    fallbackError: error instanceof Error ? error.message : String(error)
+                }];
         }
         return [
             {

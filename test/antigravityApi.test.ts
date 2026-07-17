@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   saveCache: vi.fn(),
   isCacheValid: vi.fn(),
   loadCache: vi.fn(),
+  loadMatchingCache: vi.fn(),
   getCacheAge: vi.fn(),
   resetTokenManager: vi.fn()
 }));
@@ -19,6 +20,7 @@ vi.mock('../src/antigravity/accounts/index.js', () => ({
   saveCache: mocks.saveCache,
   isCacheValid: mocks.isCacheValid,
   loadCache: mocks.loadCache,
+  loadMatchingCache: mocks.loadMatchingCache,
   getCacheAge: mocks.getCacheAge
 }));
 
@@ -39,7 +41,9 @@ describe('fetchAllQuotaSnapshots', () => {
     mocks.accountManager.getAccountEmails.mockReturnValue(['active@example.com', 'other@example.com']);
     mocks.isCacheValid.mockReturnValue(false);
     mocks.loadCache.mockReturnValue(undefined);
+    mocks.loadMatchingCache.mockReturnValue(undefined);
     mocks.getCacheAge.mockReturnValue(undefined);
+    mocks.fetchQuota.mockReset();
   });
 
   it('uses the local provider once for the active IDE account', async () => {
@@ -101,5 +105,21 @@ describe('fetchAllQuotaSnapshots', () => {
         cacheAge: 12
       })
     );
+  });
+
+  it('preserves the fresh-fetch error when falling back to stale cache', async () => {
+    mocks.fetchQuota.mockRejectedValue(new Error('token refresh failed'));
+    mocks.loadMatchingCache.mockReturnValue({ email: 'active@example.com', method: 'google', source: 'google', timestamp: 'x', models: [] });
+    mocks.getCacheAge.mockReturnValue(91);
+
+    const results = await fetchAllQuotaSnapshots({ method: 'google', refresh: true, accountEmail: 'active@example.com' });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        status: 'cached',
+        cacheAge: 91,
+        fallbackError: 'token refresh failed'
+      })
+    ]);
   });
 });

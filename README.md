@@ -70,16 +70,16 @@ No separate `antigravity-usage` install is required.
 
 ## Login Setup
 
-Configure a Google OAuth installed-application credential before using login or refreshing an expired access token:
+Login works out of the box with the public Desktop OAuth client intentionally provided by the upstream `antigravity-usage` project. No environment variables are required.
+
+To override the built-in client, set both variables:
 
 ```bash
 export ANTIGRAVITY_OAUTH_CLIENT_ID=your-client-id
 export ANTIGRAVITY_OAUTH_CLIENT_SECRET=your-client-secret
 ```
 
-Do not commit these values to the repository or store them in shell history. Rotate any credential that has previously been published.
-
-Refresh tokens are bound to the OAuth client that issued them. After rotating credentials, sign in again so each account receives a refresh token for the new client.
+Do not set only one variable: Client ID and Client Secret must be overridden as a pair. Refresh tokens are bound to the OAuth client that issued them, so changing the override requires signing in again.
 
 Then run:
 
@@ -107,7 +107,7 @@ Options:
 | `--interval <sec>` | `60` | Data refresh interval. |
 | `--columns <n>` | `2` | Preferred account card columns. |
 | `--method <name>` | `google` | Provider method: `google`, `local`, or `auto`. |
-| `--refresh` | `false` | Force refresh on startup. |
+| `--refresh` | `false` | Compatibility flag; watch always fetches fresh quota. |
 | `--mask-email` | `false` | Mask account email in card titles. |
 | `--all-models` | `false` | Include autocomplete models when supported. |
 | `--debug` | `false` | Show provider details. |

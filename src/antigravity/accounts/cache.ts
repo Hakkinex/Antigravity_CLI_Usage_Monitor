@@ -93,6 +93,11 @@ export function loadCache(email: string): QuotaSnapshot | null {
   return cache?.data || null
 }
 
+export function loadMatchingCache(email: string, expectation: CacheExpectation = {}): QuotaSnapshot | null {
+  const cache = loadAccountCache(email)
+  return cache && matchesExpectation(cache, expectation) ? cache.data : null
+}
+
 /**
  * Load cache with metadata
  */

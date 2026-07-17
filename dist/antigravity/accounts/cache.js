@@ -65,6 +65,10 @@ export function loadCache(email) {
     const cache = loadAccountCache(email);
     return cache?.data || null;
 }
+export function loadMatchingCache(email, expectation = {}) {
+    const cache = loadAccountCache(email);
+    return cache && matchesExpectation(cache, expectation) ? cache.data : null;
+}
 /**
  * Load cache with metadata
  */

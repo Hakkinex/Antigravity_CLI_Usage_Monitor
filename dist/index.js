@@ -155,7 +155,7 @@ Watch options:
   --method <name>    Data provider method, default google
   --mask-email       Mask account email in card titles
   --all-models       Include autocomplete models when provider supports it
-  --refresh          Force refresh on startup and manual refresh
+  --refresh          Kept for compatibility; watch always fetches fresh quota
   --mock             Use bundled fixture instead of live Antigravity data
 
 Quota options:
@@ -170,7 +170,7 @@ Login options:
   --no-browser       Print the OAuth URL instead of opening a browser
   --manual           Use the manual copy/paste OAuth flow
   --port <port>      Port for the OAuth callback server
-  ANTIGRAVITY_OAUTH_CLIENT_ID / ANTIGRAVITY_OAUTH_CLIENT_SECRET are required for login and token refresh
+  ANTIGRAVITY_OAUTH_CLIENT_ID / ANTIGRAVITY_OAUTH_CLIENT_SECRET optionally override the built-in upstream client
 
 Status options:
   --all              Show status for all accounts

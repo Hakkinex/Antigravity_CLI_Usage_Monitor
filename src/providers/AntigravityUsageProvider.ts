@@ -10,7 +10,15 @@ export async function fetchAntigravityProvider(options: WatchOptions): Promise<P
   try {
     const raw = await fetchAllQuotaSnapshots({ method, refresh: options.refresh });
     const hasSuccess = raw.some((result) => result.status === 'success' || result.status === 'cached');
-    if (hasSuccess) return { ok: true, raw, command };
+    if (hasSuccess) {
+      const warnings: string[] = [];
+      for (const result of raw) {
+        if (result.status === 'cached' && result.fallbackError) {
+          warnings.push(`${result.email}: fresh update failed (${result.fallbackError}); using ${result.cacheAge}s-old cache`);
+        }
+      }
+      return { ok: true, raw, command, warning: warnings.length > 0 ? warnings.join('; ') : undefined };
+    }
 
     return {
       ok: false,

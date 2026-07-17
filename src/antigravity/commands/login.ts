@@ -36,7 +36,7 @@ export async function loginCommand(options: LoginOptions): Promise<void> {
     logError(`Login failed: ${message}`)
     if (message.includes('ANTIGRAVITY_OAUTH_CLIENT_ID') || message.includes('ANTIGRAVITY_OAUTH_CLIENT_SECRET')) {
       info('')
-      info('Set `ANTIGRAVITY_OAUTH_CLIENT_ID` and `ANTIGRAVITY_OAUTH_CLIENT_SECRET`, then log in again.')
+      info('Set both OAuth environment variables, or unset both to use the built-in upstream credentials.')
     }
     process.exit(1)
   }

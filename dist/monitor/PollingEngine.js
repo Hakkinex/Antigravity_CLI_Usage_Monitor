@@ -23,7 +23,7 @@ export class PollingEngine {
             process.stdout.write('\u001b[?1049h\u001b[?25l\u001b[H');
             this.tickTimer = setInterval(() => this.tick(), 1000);
         }
-        void this.refresh(this.options.refresh).catch((error) => this.handleRefreshFailure(error));
+        void this.refresh(true).catch((error) => this.handleRefreshFailure(error));
     }
     stop() {
         this.stopped = true;
@@ -54,7 +54,7 @@ export class PollingEngine {
             clearTimeout(this.timer);
         this.state.nextRefreshInSec = this.options.interval;
         this.timer = setTimeout(() => {
-            void this.refresh(false).catch((error) => this.handleRefreshFailure(error));
+            void this.refresh(true).catch((error) => this.handleRefreshFailure(error));
         }, this.options.interval * 1000);
     }
     async refresh(forceRefresh) {
@@ -70,7 +70,7 @@ export class PollingEngine {
                 this.state.snapshot = parseAntigravityUsageJson(result.raw, this.config, 
                 // CLI privacy flags are merged into config before the engine is created.
                 String(this.options.method), this.options.mock ? 'mock' : 'antigravity');
-                this.state.lastError = undefined;
+                this.state.lastError = result.warning;
                 this.state.command = result.command;
             }
             else {

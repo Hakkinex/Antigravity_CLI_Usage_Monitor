@@ -70,16 +70,16 @@ npm link
 
 ## 登入設定
 
-使用登入功能或更新已過期的 access token 前，請先設定 Google OAuth 已安裝應用程式憑證：
+登入功能預設直接使用上游 `antigravity-usage` 專案刻意公開提供的 Desktop OAuth client，不需要設定環境變數。
+
+若要覆蓋內建 client，必須同時設定：
 
 ```bash
 export ANTIGRAVITY_OAUTH_CLIENT_ID=your-client-id
 export ANTIGRAVITY_OAUTH_CLIENT_SECRET=your-client-secret
 ```
 
-請勿將這些值提交到 repository 或留在 shell history 中。任何曾公開發布過的憑證都應立即輪替。
-
-Refresh token 會綁定簽發它的 OAuth client。輪替憑證後，請重新登入各帳號，取得屬於新 client 的 refresh token。
+不可只設定其中一個變數，Client ID 與 Client Secret 必須成對覆蓋。Refresh token 會綁定簽發它的 OAuth client，因此變更 override 後需要重新登入。
 
 接著執行：
 
@@ -107,7 +107,7 @@ agy-monitor watch --mock
 | `--interval <sec>` | `60` | 資料刷新間隔。 |
 | `--columns <n>` | `2` | 帳號卡片偏好的欄數。 |
 | `--method <name>` | `google` | Provider method：`google`、`local` 或 `auto`。 |
-| `--refresh` | `false` | 啟動時強制刷新。 |
+| `--refresh` | `false` | 相容性參數；watch 現在每次都查詢 fresh quota。 |
 | `--mask-email` | `false` | 遮罩卡片標題中的帳號 email。 |
 | `--all-models` | `false` | Provider 支援時納入 autocomplete models。 |
 | `--debug` | `false` | 顯示 provider 細節。 |

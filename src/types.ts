@@ -85,5 +85,5 @@ export type DebugDumpOptions = {
 };
 
 export type ProviderResult =
-  | { ok: true; raw: unknown; command: string }
+  | { ok: true; raw: unknown; command: string; warning?: string }
   | { ok: false; error: MonitorError; command?: string };

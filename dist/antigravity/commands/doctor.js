@@ -54,15 +54,20 @@ export function doctorCommand() {
     console.log('─'.repeat(40));
     const hasClientId = !!process.env.ANTIGRAVITY_OAUTH_CLIENT_ID;
     const hasClientSecret = !!process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET;
-    if (hasClientId || hasClientSecret) {
-        console.log('  OAuth credentials:');
+    if (hasClientId && hasClientSecret) {
+        console.log('  ✅ Using custom OAuth credentials');
         console.log(`    ANTIGRAVITY_OAUTH_CLIENT_ID: ${hasClientId ? 'Set' : 'Not set'}`);
         console.log(`    ANTIGRAVITY_OAUTH_CLIENT_SECRET: ${hasClientSecret ? 'Set' : 'Not set'}`);
     }
+    else if (hasClientId || hasClientSecret) {
+        console.log('  ❌ Custom OAuth override is incomplete');
+        console.log(`    ANTIGRAVITY_OAUTH_CLIENT_ID: ${hasClientId ? 'Set' : 'Not set'}`);
+        console.log(`    ANTIGRAVITY_OAUTH_CLIENT_SECRET: ${hasClientSecret ? 'Set' : 'Not set'}`);
+        console.log('  💡 Set both variables or unset both to use the built-in upstream credentials.');
+    }
     else {
-        console.log('  ❌ OAuth credentials are not configured');
-        console.log('  💡 Set ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET,');
-        console.log('     then log in again with the rotated credential.');
+        console.log('  ✅ Using built-in OAuth credentials from antigravity-usage upstream');
+        console.log('  💡 Set both environment variables only when overriding the built-in client.');
     }
     console.log();
 }
