@@ -136,4 +136,33 @@ describe('parseAntigravityUsageJson', () => {
     expect(model?.status).toBe('exhausted');
     expect(model?.resetInText).toBe('1h 0m');
   });
+
+  it('does not duplicate a weekly-only summary into the five-hour fields', () => {
+    const snapshot = parseAntigravityUsageJson(
+      [{
+        email: 'weekly-only@example.com',
+        status: 'success',
+        snapshot: {
+          email: 'weekly-only@example.com',
+          models: [{
+            name: 'gemini-summary',
+            windows: {
+              weekly: {
+                remainingPercentage: 97,
+                resetTime: '2026-07-27T03:17:41Z'
+              }
+            }
+          }]
+        }
+      }],
+      defaultConfig,
+      'google'
+    );
+
+    const model = snapshot.accounts[0]?.models[0];
+    expect(model?.remainingPercent).toBeNull();
+    expect(model?.resetInText).toBeNull();
+    expect(model?.weeklyRemainingPercent).toBe(97);
+    expect(model?.weeklyResetInText).toBeTruthy();
+  });
 });

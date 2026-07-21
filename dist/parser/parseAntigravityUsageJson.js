@@ -110,14 +110,29 @@ const PERCENT_KEYS = [
 const RESET_TEXT_KEYS = ['resetInText', 'resetsIn', 'resetIn', 'reset', 'resets_in'];
 const RESET_AT_KEYS = ['resetAt', 'resetTime', 'reset_at'];
 function selectBestQuota(record) {
-    const candidates = collectQuotaCandidates(record).filter((candidate) => candidate.remainingPercent !== null || candidate.resetInText !== null || candidate.resetAt !== null);
-    if (candidates.length === 0) {
-        return {
-            remainingPercent: null,
-            resetInText: null,
-            resetAt: null
-        };
+    const windows = firstRecord(record, ['windows']);
+    if (windows) {
+        const fiveHour = firstRecord(windows, ['fiveHour']);
+        if (fiveHour)
+            return readQuotaCandidate(fiveHour);
+        const unknown = firstRecord(windows, ['unknown']);
+        if (unknown)
+            return readQuotaCandidate(unknown);
+        const nonWeekly = Object.entries(windows)
+            .filter(([key, value]) => !key.toLowerCase().includes('week') && isRecord(value))
+            .map(([, value]) => readQuotaCandidate(value))
+            .filter((candidate) => candidate.remainingPercent !== null || candidate.resetInText !== null || candidate.resetAt !== null);
+        if (nonWeekly.length > 0)
+            return lowestQuota(nonWeekly);
+        // A weekly-only summary must not be duplicated into the 5h column.
+        return emptyQuota();
     }
+    const candidates = collectQuotaCandidates(record).filter((candidate) => candidate.remainingPercent !== null || candidate.resetInText !== null || candidate.resetAt !== null);
+    if (candidates.length === 0)
+        return emptyQuota();
+    return lowestQuota(candidates);
+}
+function lowestQuota(candidates) {
     return candidates.reduce((best, candidate) => {
         if (best.remainingPercent === null)
             return candidate;
@@ -125,6 +140,9 @@ function selectBestQuota(record) {
             return best;
         return candidate.remainingPercent < best.remainingPercent ? candidate : best;
     });
+}
+function emptyQuota() {
+    return { remainingPercent: null, resetInText: null, resetAt: null };
 }
 function selectWeeklyQuota(record) {
     const windows = firstRecord(record, ['windows']);

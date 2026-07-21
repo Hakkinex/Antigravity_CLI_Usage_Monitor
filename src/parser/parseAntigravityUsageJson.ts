@@ -141,23 +141,43 @@ type QuotaCandidate = {
 };
 
 function selectBestQuota(record: AnyRecord): QuotaCandidate {
+  const windows = firstRecord(record, ['windows']);
+  if (windows) {
+    const fiveHour = firstRecord(windows, ['fiveHour']);
+    if (fiveHour) return readQuotaCandidate(fiveHour);
+
+    const unknown = firstRecord(windows, ['unknown']);
+    if (unknown) return readQuotaCandidate(unknown);
+
+    const nonWeekly = Object.entries(windows)
+      .filter(([key, value]) => !key.toLowerCase().includes('week') && isRecord(value))
+      .map(([, value]) => readQuotaCandidate(value as AnyRecord))
+      .filter((candidate) => candidate.remainingPercent !== null || candidate.resetInText !== null || candidate.resetAt !== null);
+    if (nonWeekly.length > 0) return lowestQuota(nonWeekly);
+
+    // A weekly-only summary must not be duplicated into the 5h column.
+    return emptyQuota();
+  }
+
   const candidates = collectQuotaCandidates(record).filter(
     (candidate) => candidate.remainingPercent !== null || candidate.resetInText !== null || candidate.resetAt !== null
   );
 
-  if (candidates.length === 0) {
-    return {
-      remainingPercent: null,
-      resetInText: null,
-      resetAt: null
-    };
-  }
+  if (candidates.length === 0) return emptyQuota();
 
+  return lowestQuota(candidates);
+}
+
+function lowestQuota(candidates: QuotaCandidate[]): QuotaCandidate {
   return candidates.reduce((best, candidate) => {
     if (best.remainingPercent === null) return candidate;
     if (candidate.remainingPercent === null) return best;
     return candidate.remainingPercent < best.remainingPercent ? candidate : best;
   });
+}
+
+function emptyQuota(): QuotaCandidate {
+  return { remainingPercent: null, resetInText: null, resetAt: null };
 }
 
 function selectWeeklyQuota(record: AnyRecord): QuotaCandidate {
