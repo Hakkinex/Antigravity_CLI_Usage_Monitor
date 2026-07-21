@@ -1,7 +1,8 @@
 import type { ModelQuota, ModelStatus } from '../types.js';
 export type RenderQuotaGroup = {
     label: string;
-    quota: QuotaSummary;
+    fiveHour: QuotaSummary;
+    week: QuotaSummary;
 };
 export type QuotaSummary = {
     remainingPercent: number | null;

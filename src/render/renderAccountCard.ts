@@ -4,15 +4,16 @@ import { statusDot } from '../utils/status.js';
 import { buildQuotaGroups } from './quotaGroups.js';
 
 const MODEL_WIDTH = 23;
-const QUOTA_WIDTH = 24;
-const CARD_WIDTH = MODEL_WIDTH + QUOTA_WIDTH + 7;
+const FIVE_HOUR_WIDTH = 16;
+const WEEK_WIDTH = 16;
+const CARD_WIDTH = MODEL_WIDTH + FIVE_HOUR_WIDTH + WEEK_WIDTH + 10;
 
 export function renderAccountCard(account: AccountQuota, options: Pick<WatchOptions, 'allModels'> = { allModels: false }): string[] {
   const title = ` ${account.displayName} `;
   const lines = [
     `${title}${'─'.repeat(Math.max(0, CARD_WIDTH - title.length))}`,
     tableBorder('top'),
-    row(color('Model', 71), color('Quota', 71)),
+    row(color('Model', 71), color('5h', 71), color('Weekly', 71)),
     tableBorder('mid')
   ];
 
@@ -30,7 +31,8 @@ export function renderAccountCard(account: AccountQuota, options: Pick<WatchOpti
       lines.push(
         row(
           color(truncate(group.label, MODEL_WIDTH), 223),
-          quotaCell(group.quota.status, group.quota.remainingPercent, group.quota.resetInText)
+          quotaCell(group.fiveHour.status, group.fiveHour.remainingPercent, group.fiveHour.resetInText),
+          quotaCell(group.week.status, group.week.remainingPercent, group.week.resetInText)
         )
       );
     }
@@ -53,11 +55,11 @@ function compactReset(reset: string | null): string {
   return reset.replace(/\s+/g, '');
 }
 
-function row(model: string, quota: string): string {
+function row(model: string, fiveHour: string, week: string): string {
   return `│ ${padRight(truncate(model, MODEL_WIDTH), MODEL_WIDTH)} │ ${padRight(
-    truncate(quota, QUOTA_WIDTH),
-    QUOTA_WIDTH
-  )} │`;
+    truncate(fiveHour, FIVE_HOUR_WIDTH),
+    FIVE_HOUR_WIDTH
+  )} │ ${padRight(truncate(week, WEEK_WIDTH), WEEK_WIDTH)} │`;
 }
 
 function fullRow(content: string): string {
@@ -65,7 +67,7 @@ function fullRow(content: string): string {
 }
 
 function tableBorder(kind: 'top' | 'mid' | 'bottom'): string {
-  if (kind === 'top') return `┌${'─'.repeat(MODEL_WIDTH + 2)}┬${'─'.repeat(QUOTA_WIDTH + 2)}┐`;
-  if (kind === 'mid') return `├${'─'.repeat(MODEL_WIDTH + 2)}┼${'─'.repeat(QUOTA_WIDTH + 2)}┤`;
-  return `└${'─'.repeat(MODEL_WIDTH + 2)}┴${'─'.repeat(QUOTA_WIDTH + 2)}┘`;
+  if (kind === 'top') return `┌${'─'.repeat(MODEL_WIDTH + 2)}┬${'─'.repeat(FIVE_HOUR_WIDTH + 2)}┬${'─'.repeat(WEEK_WIDTH + 2)}┐`;
+  if (kind === 'mid') return `├${'─'.repeat(MODEL_WIDTH + 2)}┼${'─'.repeat(FIVE_HOUR_WIDTH + 2)}┼${'─'.repeat(WEEK_WIDTH + 2)}┤`;
+  return `└${'─'.repeat(MODEL_WIDTH + 2)}┴${'─'.repeat(FIVE_HOUR_WIDTH + 2)}┴${'─'.repeat(WEEK_WIDTH + 2)}┘`;
 }

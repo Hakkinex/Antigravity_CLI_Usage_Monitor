@@ -205,6 +205,20 @@ export class CloudCodeClient {
         return this.request('/v1internal:fetchAvailableModels', body);
     }
     /**
+     * Retrieve user quota summary - the authoritative source for 5h + weekly windows
+     * Falls back gracefully (404 → undefined) so caller can use legacy fetchAvailableModels
+     */
+    async retrieveUserQuotaSummary() {
+        try {
+            const body = this.projectId ? { project: this.projectId } : {};
+            return await this.request('/v1internal:retrieveUserQuotaSummary', body);
+        }
+        catch (err) {
+            debug('cloudcode', 'retrieveUserQuotaSummary not available, falling back to legacy endpoint');
+            return undefined;
+        }
+    }
+    /**
      * Generate content using a specific model (Agent Request Format)
      * Used for wake-up triggers to warm up models
      *

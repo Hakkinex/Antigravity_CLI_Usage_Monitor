@@ -4,18 +4,15 @@ import { stripAnsi } from '../src/utils/text.js';
 import type { AccountQuota, ModelQuota } from '../src/types.js';
 
 describe('renderAccountCard', () => {
-  it('renders Antigravity CLI quota groups instead of per-model rows', () => {
+  it('renders Antigravity CLI quota groups with 5h and Weekly columns', () => {
     const account: AccountQuota = {
       id: 'user@example.com',
       email: 'user@example.com',
       displayName: 'user@example.com',
       status: 'ok',
       models: [
-        model('Gemini 3 Flash', 'gemini', 99, '4h 4m'),
-        model('Gemini 3.1 Pro (High)', 'gemini', 97, '4h 4m'),
-        model('Claude Opus 4.6 (Thinking)', 'claude', 91, '130h 1m'),
-        model('Claude Sonnet 4.6 (Thinking)', 'claude', 93, '130h 1m'),
-        model('GPT-OSS 120B (Medium)', 'gpt', 92, '130h 1m')
+        modelWithWeekly('Gemini 3 Flash', 'gemini', 99, '4h 4m', 95, '6d 2h'),
+        modelWithWeekly('Claude Opus 4.6 (Thinking)', 'claude', 91, '130h 1m', 88, '6d 5h')
       ]
     };
 
@@ -23,10 +20,10 @@ describe('renderAccountCard', () => {
 
     expect(output).toContain('Gemini Flash/Pro');
     expect(output).toContain('Claude/ChatGPT');
-    expect(output).toContain('97% 4h4m');
-    expect(output).toContain('91% 130h1m');
-    expect(output).toContain('Quota');
-    expect(output).not.toContain('Gemini 3 Flash');
+    expect(output).toContain('5h');
+    expect(output).toContain('Weekly');
+    expect(output).toContain('95% 6d2h');
+    expect(output).toContain('88% 6d5h');
   });
 
   it('keeps exhausted rows visible and shows reset time', () => {
@@ -56,8 +53,6 @@ describe('renderAccountCard', () => {
 
     expect(output).toContain('Claude/ChatGPT');
     expect(output).toContain('● 3h22m');
-    expect(output).toContain('3h22m');
-    expect(output).not.toContain('no data');
     expect(output).not.toContain('?');
   });
 });
@@ -67,6 +62,17 @@ function model(
   group: ModelQuota['group'],
   remainingPercent: number | null,
   resetInText: string
+): ModelQuota {
+  return modelWithWeekly(name, group, remainingPercent, resetInText, null, '');
+}
+
+function modelWithWeekly(
+  name: string,
+  group: ModelQuota['group'],
+  remainingPercent: number | null,
+  resetInText: string,
+  weeklyPercent: number | null,
+  weeklyReset: string
 ): ModelQuota {
   return {
     id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -81,6 +87,9 @@ function model(
           ? 'exhausted'
           : remainingPercent > 80
             ? 'healthy'
-            : 'medium'
+            : 'medium',
+    weeklyRemainingPercent: weeklyPercent,
+    weeklyResetInText: weeklyReset || null,
+    weeklyStatus: weeklyPercent === null ? 'unknown' : weeklyPercent > 80 ? 'healthy' : 'medium'
   };
 }

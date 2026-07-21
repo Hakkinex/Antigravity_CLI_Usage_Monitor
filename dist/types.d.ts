@@ -25,6 +25,10 @@ export type ModelQuota = {
     resetInText: string | null;
     resetAt?: string | null;
     status: ModelStatus;
+    weeklyRemainingPercent: number | null;
+    weeklyResetInText: string | null;
+    weeklyResetAt?: string | null;
+    weeklyStatus: ModelStatus;
     isAutocompleteOnly?: boolean;
 };
 export type MonitorError = {

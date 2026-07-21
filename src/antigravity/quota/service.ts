@@ -5,7 +5,7 @@
 import { debug } from '../core/logger.js'
 import { getTokenManager } from '../google/token-manager.js'
 import { CloudCodeClient, type FetchAvailableModelsResponse } from '../google/cloudcode.js'
-import { parseQuotaSnapshot } from '../google/parser.js'
+import { parseQuotaSnapshot, parseQuotaSummary, parsePromptCredits } from '../google/parser.js'
 import { extractProjectId } from '../google/oauth.js'
 import { 
   detectAntigravityProcess, 
@@ -75,17 +75,28 @@ async function fetchQuotaGoogle(): Promise<QuotaSnapshot> {
     }
   }
   
-  // Try to fetch models, but it might fail with 403
+  // Try the authoritative quota summary endpoint first (5h + weekly)
+  const summary = await client.retrieveUserQuotaSummary()
+  if (summary) {
+    const summarySnapshot = parseQuotaSummary(summary, email ?? undefined)
+    if (summarySnapshot) {
+      debug('service', 'Quota summary parsed from retrieveUserQuotaSummary')
+      summarySnapshot.planType = codeAssistResponse.planInfo?.planType
+      summarySnapshot.promptCredits = parsePromptCredits(codeAssistResponse as any)
+      return summarySnapshot
+    }
+  }
+
+  // Fallback to legacy per-model endpoint
+  debug('service', 'Falling back to legacy fetchAvailableModels')
   let modelsResponse: FetchAvailableModelsResponse = {}
   try {
     modelsResponse = await client.fetchAvailableModels()
     debug('service', 'Models response received', JSON.stringify(modelsResponse))
   } catch (err) {
     debug('service', 'Failed to fetch models (might need different permissions)', err)
-    // Continue without models - we'll still show prompt credits
   }
   
-  // Parse into snapshot with email
   const snapshot = parseQuotaSnapshot(codeAssistResponse, modelsResponse, email)
   
   debug('service', 'Quota snapshot created')

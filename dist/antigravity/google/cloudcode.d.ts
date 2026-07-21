@@ -53,6 +53,23 @@ export interface FetchAvailableModelsResponse {
     models?: Record<string, ModelInfo>;
     defaultAgentModelId?: string;
 }
+export interface QuotaSummaryBucket {
+    bucketId: string;
+    displayName?: string;
+    window?: string;
+    resetTime?: string;
+    remainingFraction?: number;
+    description?: string;
+}
+export interface QuotaSummaryGroup {
+    displayName?: string;
+    description?: string;
+    buckets: QuotaSummaryBucket[];
+}
+export interface RetrieveUserQuotaSummaryResponse {
+    groups?: QuotaSummaryGroup[];
+    description?: string;
+}
 /**
  * Cloud Code API client
  */
@@ -83,6 +100,11 @@ export declare class CloudCodeClient {
      * Requires project ID from loadCodeAssist
      */
     fetchAvailableModels(): Promise<FetchAvailableModelsResponse>;
+    /**
+     * Retrieve user quota summary - the authoritative source for 5h + weekly windows
+     * Falls back gracefully (404 → undefined) so caller can use legacy fetchAvailableModels
+     */
+    retrieveUserQuotaSummary(): Promise<RetrieveUserQuotaSummaryResponse | undefined>;
     /**
      * Generate content using a specific model (Agent Request Format)
      * Used for wake-up triggers to warm up models

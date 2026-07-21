@@ -1,4 +1,5 @@
 import type { ModelQuotaInfo, QuotaSnapshot } from '../quota/types.js';
+import type { RetrieveUserQuotaSummaryResponse } from './cloudcode.js';
 interface RawQuotaInfo {
     remainingFraction?: number;
     tier?: string;
@@ -28,5 +29,12 @@ interface CodeAssistResponse {
     };
     availablePromptCredits?: number;
 }
+export declare function parsePromptCredits(response: CodeAssistResponse): {
+    available: number;
+    monthly: number;
+    usedPercentage: number;
+    remainingPercentage: number;
+} | undefined;
 export declare function parseQuotaSnapshot(codeAssistResponse: CodeAssistResponse, modelsResponse: RawResponse, email?: string): QuotaSnapshot;
+export declare function parseQuotaSummary(summary: RetrieveUserQuotaSummaryResponse, email?: string, now?: number): QuotaSnapshot | null;
 export {};

@@ -2,7 +2,8 @@ import type { ModelQuota, ModelStatus } from '../types.js';
 
 export type RenderQuotaGroup = {
   label: string;
-  quota: QuotaSummary;
+  fiveHour: QuotaSummary;
+  week: QuotaSummary;
 };
 
 export type QuotaSummary = {
@@ -34,16 +35,17 @@ const GROUPS: GroupDefinition[] = [
 export function buildQuotaGroups(models: ModelQuota[]): RenderQuotaGroup[] {
   return GROUPS.map((group) => ({
     label: group.label,
-    quota: summarizeQuota(models.filter(group.matches))
-  })).filter((group) => group.quota.remainingPercent !== null || group.quota.resetInText !== null);
+    fiveHour: summarizeQuota(models.filter(group.matches), 'five-hour'),
+    week: summarizeQuota(models.filter(group.matches), 'week')
+  })).filter((group) => group.fiveHour.remainingPercent !== null || group.fiveHour.resetInText !== null || group.week.remainingPercent !== null || group.week.resetInText !== null);
 }
 
-function summarizeQuota(models: ModelQuota[]): QuotaSummary {
+function summarizeQuota(models: ModelQuota[], period: 'five-hour' | 'week'): QuotaSummary {
   const candidates = models
     .map((model) => ({
-      remainingPercent: model.remainingPercent,
-      resetInText: model.resetInText,
-      status: model.status
+      remainingPercent: period === 'five-hour' ? model.remainingPercent : model.weeklyRemainingPercent,
+      resetInText: period === 'five-hour' ? model.resetInText : model.weeklyResetInText,
+      status: period === 'five-hour' ? model.status : model.weeklyStatus
     }))
     .filter((quota) => quota.remainingPercent !== null || quota.resetInText !== null);
 

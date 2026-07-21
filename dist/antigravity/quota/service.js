@@ -4,7 +4,7 @@
 import { debug } from '../core/logger.js';
 import { getTokenManager } from '../google/token-manager.js';
 import { CloudCodeClient } from '../google/cloudcode.js';
-import { parseQuotaSnapshot } from '../google/parser.js';
+import { parseQuotaSnapshot, parseQuotaSummary, parsePromptCredits } from '../google/parser.js';
 import { extractProjectId } from '../google/oauth.js';
 import { detectAntigravityProcess, discoverPorts, probeForConnectAPI, ConnectClient, parseLocalQuotaSnapshot } from '../local/index.js';
 import { AntigravityNotRunningError, LocalConnectionError, PortDetectionError, NoAuthMethodAvailableError } from '../core/errors.js';
@@ -54,7 +54,19 @@ async function fetchQuotaGoogle() {
             debug('service', `Project ID saved: ${projectId}`);
         }
     }
-    // Try to fetch models, but it might fail with 403
+    // Try the authoritative quota summary endpoint first (5h + weekly)
+    const summary = await client.retrieveUserQuotaSummary();
+    if (summary) {
+        const summarySnapshot = parseQuotaSummary(summary, email ?? undefined);
+        if (summarySnapshot) {
+            debug('service', 'Quota summary parsed from retrieveUserQuotaSummary');
+            summarySnapshot.planType = codeAssistResponse.planInfo?.planType;
+            summarySnapshot.promptCredits = parsePromptCredits(codeAssistResponse);
+            return summarySnapshot;
+        }
+    }
+    // Fallback to legacy per-model endpoint
+    debug('service', 'Falling back to legacy fetchAvailableModels');
     let modelsResponse = {};
     try {
         modelsResponse = await client.fetchAvailableModels();
@@ -62,9 +74,7 @@ async function fetchQuotaGoogle() {
     }
     catch (err) {
         debug('service', 'Failed to fetch models (might need different permissions)', err);
-        // Continue without models - we'll still show prompt credits
     }
-    // Parse into snapshot with email
     const snapshot = parseQuotaSnapshot(codeAssistResponse, modelsResponse, email);
     debug('service', 'Quota snapshot created');
     return snapshot;

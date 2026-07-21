@@ -96,7 +96,7 @@ export function parseGoogleModels(raw, ctx) {
         raw
     };
 }
-function parsePromptCredits(response) {
+export function parsePromptCredits(response) {
     const monthly = response.planInfo?.monthlyPromptCredits;
     const available = response.availablePromptCredits;
     if (monthly === undefined || available === undefined)
@@ -122,6 +122,83 @@ export function parseQuotaSnapshot(codeAssistResponse, modelsResponse, email) {
             codeAssistResponse,
             modelsResponse
         }
+    };
+}
+const SUMMARY_BUCKET_MAP = {
+    'gemini-5h': { modelId: 'gemini-summary', displayName: 'Gemini Flash/Pro', window: 'fiveHour' },
+    'gemini-weekly': { modelId: 'gemini-summary', displayName: 'Gemini Flash/Pro', window: 'weekly' },
+    '3p-5h': { modelId: '3p-summary', displayName: 'Claude/ChatGPT', window: 'fiveHour' },
+    '3p-weekly': { modelId: '3p-summary', displayName: 'Claude/ChatGPT', window: 'weekly' },
+};
+function toWindowFromBucket(bucket, kind, now) {
+    const remainingPercentage = toPercent(bucket.remainingFraction);
+    const resetMs = bucket.resetTime ? Date.parse(bucket.resetTime) : NaN;
+    const timeUntilResetMs = Number.isFinite(resetMs) ? Math.max(0, resetMs - now) : undefined;
+    const isExhausted = remainingPercentage === 0;
+    return {
+        id: kind,
+        label: bucket.displayName,
+        remainingPercentage,
+        isExhausted,
+        resetTime: bucket.resetTime,
+        timeUntilResetMs,
+    };
+}
+export function parseQuotaSummary(summary, email, now = Date.now()) {
+    if (!summary.groups || summary.groups.length === 0)
+        return null;
+    const models = [];
+    const seen = new Map();
+    for (const group of summary.groups) {
+        for (const bucket of group.buckets || []) {
+            const mapping = SUMMARY_BUCKET_MAP[bucket.bucketId];
+            if (!mapping)
+                continue;
+            let model = seen.get(mapping.modelId);
+            if (!model) {
+                model = {
+                    name: mapping.modelId,
+                    displayName: mapping.displayName,
+                    label: mapping.displayName,
+                    modelId: mapping.modelId,
+                    remainingPercentage: undefined,
+                    isExhausted: false,
+                    resetTime: undefined,
+                    timeUntilResetMs: undefined,
+                    windows: {},
+                };
+                seen.set(mapping.modelId, model);
+                models.push(model);
+            }
+            const window = toWindowFromBucket(bucket, mapping.window, now);
+            model.windows[mapping.window] = window;
+            const legacy = model.windows.fiveHour ?? model.windows.weekly;
+            if (legacy) {
+                model.remainingPercentage = legacy.remainingPercentage;
+                model.isExhausted = legacy.isExhausted;
+                model.resetTime = legacy.resetTime;
+                model.timeUntilResetMs = legacy.timeUntilResetMs;
+            }
+        }
+    }
+    let earliest;
+    for (const model of models) {
+        for (const window of Object.values(model.windows ?? {})) {
+            if (window?.resetTime) {
+                if (!earliest || window.resetTime < earliest)
+                    earliest = window.resetTime;
+            }
+        }
+    }
+    return {
+        schemaVersion: 2,
+        email: email ?? '',
+        source: 'google',
+        method: 'google',
+        timestamp: new Date(now).toISOString(),
+        models,
+        quotaResetTime: earliest ?? null,
+        raw: summary,
     };
 }
 //# sourceMappingURL=parser.js.map

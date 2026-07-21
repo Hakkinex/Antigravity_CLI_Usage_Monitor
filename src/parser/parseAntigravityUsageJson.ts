@@ -101,6 +101,7 @@ function normalizeModel(raw: unknown, index: number, config: MonitorConfig): Mod
   const record = isRecord(raw) ? raw : {};
   const name = firstString(record, ['name', 'model', 'modelName', 'displayName', 'label', 'modelId']) ?? `Model ${index + 1}`;
   const bestQuota = selectBestQuota(record);
+  const weeklyQuota = selectWeeklyQuota(record);
   const group = getModelGroup(name);
 
   return {
@@ -111,6 +112,10 @@ function normalizeModel(raw: unknown, index: number, config: MonitorConfig): Mod
     resetInText: bestQuota.resetInText,
     resetAt: bestQuota.resetAt,
     status: getModelStatus(bestQuota.remainingPercent, config),
+    weeklyRemainingPercent: weeklyQuota.remainingPercent,
+    weeklyResetInText: weeklyQuota.resetInText,
+    weeklyResetAt: weeklyQuota.resetAt,
+    weeklyStatus: getModelStatus(weeklyQuota.remainingPercent, config),
     isAutocompleteOnly: firstBoolean(record, ['isAutocompleteOnly'])
   };
 }
@@ -153,6 +158,17 @@ function selectBestQuota(record: AnyRecord): QuotaCandidate {
     if (candidate.remainingPercent === null) return best;
     return candidate.remainingPercent < best.remainingPercent ? candidate : best;
   });
+}
+
+function selectWeeklyQuota(record: AnyRecord): QuotaCandidate {
+  const windows = firstRecord(record, ['windows']);
+  if (windows) {
+    const weeklyWindow = firstRecord(windows, ['weekly', 'week']);
+    if (weeklyWindow) {
+      return readQuotaCandidate(weeklyWindow);
+    }
+  }
+  return readLegacyWeeklyCandidate(record);
 }
 
 function collectQuotaCandidates(record: AnyRecord): QuotaCandidate[] {
@@ -294,8 +310,12 @@ function clampPercent(value: number): number {
 
 function formatResetFromSeconds(seconds: number | null): string | null {
   if (seconds === null) return null;
-  const hours = Math.floor(seconds / 3600);
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) {
+    return hours > 0 ? `${days}d ${hours}h ${minutes}m` : `${days}d ${minutes}m`;
+  }
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 

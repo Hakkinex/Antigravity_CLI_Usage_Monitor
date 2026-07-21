@@ -81,6 +81,26 @@ export interface FetchAvailableModelsResponse {
   defaultAgentModelId?: string
 }
 
+export interface QuotaSummaryBucket {
+  bucketId: string
+  displayName?: string
+  window?: string
+  resetTime?: string
+  remainingFraction?: number
+  description?: string
+}
+
+export interface QuotaSummaryGroup {
+  displayName?: string
+  description?: string
+  buckets: QuotaSummaryBucket[]
+}
+
+export interface RetrieveUserQuotaSummaryResponse {
+  groups?: QuotaSummaryGroup[]
+  description?: string
+}
+
 /**
  * Cloud Code API client
  */
@@ -282,6 +302,20 @@ export class CloudCodeClient {
   async fetchAvailableModels(): Promise<FetchAvailableModelsResponse> {
     const body = this.projectId ? { project: this.projectId } : {}
     return this.request<FetchAvailableModelsResponse>('/v1internal:fetchAvailableModels', body)
+  }
+
+  /**
+   * Retrieve user quota summary - the authoritative source for 5h + weekly windows
+   * Falls back gracefully (404 → undefined) so caller can use legacy fetchAvailableModels
+   */
+  async retrieveUserQuotaSummary(): Promise<RetrieveUserQuotaSummaryResponse | undefined> {
+    try {
+      const body = this.projectId ? { project: this.projectId } : {}
+      return await this.request<RetrieveUserQuotaSummaryResponse>('/v1internal:retrieveUserQuotaSummary', body)
+    } catch (err) {
+      debug('cloudcode', 'retrieveUserQuotaSummary not available, falling back to legacy endpoint')
+      return undefined
+    }
   }
   
   /**

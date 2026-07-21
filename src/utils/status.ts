@@ -3,7 +3,7 @@ import type { ModelGroup, ModelStatus, MonitorConfig } from '../types.js';
 export function getModelGroup(name: string): ModelGroup {
   const lower = name.toLowerCase();
   if (lower.includes('gemini')) return 'gemini';
-  if (lower.includes('claude')) return 'claude';
+  if (lower.includes('claude') || lower.includes('gpt') || lower.includes('3p')) return 'claude';
   if (lower.includes('gpt')) return 'gpt';
   return 'other';
 }
